@@ -1,9 +1,13 @@
 # Guía de Integración con n8n
 
+> **🌐 URLs de Producción:**
+> - **Backend:** https://botiva.onrender.com
+> - **Frontend:** https://botiva.vercel.app
+
 ## Endpoints para n8n
 
 ### 1. Crear Pedido (POST /api/orders)
-**URL:** `http://localhost:3001/api/orders`  
+**URL:** `https://botiva.onrender.com/api/orders`  
 **Método:** POST  
 **Headers:** `Content-Type: application/json`
 
@@ -29,7 +33,7 @@
 ```
 
 ### 2. Actualizar Estado de Pago (Admin) (PATCH /api/orders/:id)
-**URL:** `http://localhost:3001/api/orders/{order_id}`  
+**URL:** `https://botiva.onrender.com/api/orders/{order_id}`  
 **Método:** PATCH  
 **Headers:** 
 - `Content-Type: application/json`
@@ -43,7 +47,7 @@
 ```
 
 ### 3. Actualizar Estado de Pago (Rider) (PATCH /api/orders/:id/payment-status)
-**URL:** `http://localhost:3001/api/orders/{order_id}/payment-status`  
+**URL:** `https://botiva.onrender.com/api/orders/{order_id}/payment-status`  
 **Método:** PATCH  
 **Headers:** 
 - `Content-Type: application/json`
@@ -64,8 +68,8 @@
 - `cancelado` - Pago cancelado
 - `reembolsado` - Pago reembolsado
 
-### 3. Obtener Pedido (GET /api/orders/:id)
-**URL:** `http://localhost:3001/api/orders/{order_id}`  
+### 4. Obtener Pedido (GET /api/orders/:id)
+**URL:** `https://botiva.onrender.com/api/orders/{order_id}`  
 **Método:** GET  
 **Headers:** `Authorization: Bearer {admin_token}`
 
@@ -73,22 +77,27 @@
 
 ### 1. Creación de Pedido desde WhatsApp
 ```
-WhatsApp → n8n → POST /api/orders
+WhatsApp → n8n → POST https://botiva.onrender.com/api/orders
 ```
 
 ### 2. Confirmación de Pago (Admin)
 ```
-Sistema de Pago → n8n → PATCH /api/orders/:id
+Sistema de Pago → n8n → PATCH https://botiva.onrender.com/api/orders/:id
 ```
 
 ### 3. Confirmación de Pago (Rider)
 ```
-Rider App → n8n → PATCH /api/orders/:id/payment-status
+Rider App → n8n → PATCH https://botiva.onrender.com/api/orders/:id/payment-status
 ```
 
 ### 4. Notificación de Estado
 ```
 n8n → WhatsApp (cuando cambia el estado)
+```
+
+### 5. Ver Pedido en Panel Web
+```
+Cliente/Admin → https://botiva.vercel.app
 ```
 
 ## Configuración de n8n
@@ -122,7 +131,7 @@ n8n → WhatsApp (cuando cambia el estado)
       "name": "HTTP Request - API",
       "type": "n8n-nodes-base.httpRequest",
       "parameters": {
-        "url": "http://localhost:3001/api/orders",
+        "url": "https://botiva.onrender.com/api/orders",
         "method": "POST",
         "body": "={{ $json }}"
       }
@@ -139,7 +148,7 @@ n8n → WhatsApp (cuando cambia el estado)
       "name": "HTTP Request - Actualizar",
       "type": "n8n-nodes-base.httpRequest",
       "parameters": {
-        "url": "http://localhost:3001/api/orders/{{ $json.order_id }}",
+        "url": "https://botiva.onrender.com/api/orders/{{ $json.order_id }}",
         "method": "PATCH",
         "headers": {
           "Authorization": "Bearer YOUR_ADMIN_TOKEN"
@@ -156,22 +165,25 @@ n8n → WhatsApp (cuando cambia el estado)
 ## Variables de Entorno para n8n
 
 ```env
-API_BASE_URL=http://localhost:3001
+API_BASE_URL=https://botiva.onrender.com
+FRONTEND_URL=https://botiva.vercel.app
 ADMIN_TOKEN=your_admin_jwt_token
 ```
 
 ## Notas Importantes
 
-1. **Autenticación:** Los endpoints de actualización requieren token de administrador
+1. **Autenticación:** Los endpoints de actualización requieren token de administrador o rider según el caso
 2. **Validación:** El backend valida que los estados sean válidos
 3. **Logs:** Todos los cambios se registran en `order_events`
-4. **Realtime:** Los cambios se reflejan inmediatamente en el panel de administración
+4. **Realtime:** Los cambios se reflejan inmediatamente en el panel de administración (https://botiva.vercel.app)
+5. **HTTPS:** Todas las URLs de producción usan HTTPS (obligatorio para producción)
+6. **CORS:** El backend está configurado para aceptar peticiones desde el frontend de producción
 
 ## Testing
 
 ### Crear pedido de prueba
 ```bash
-curl -X POST http://localhost:3001/api/orders \
+curl -X POST https://botiva.onrender.com/api/orders \
   -H "Content-Type: application/json" \
   -d '{
     "external_id": "test_001",
@@ -192,9 +204,14 @@ curl -X POST http://localhost:3001/api/orders \
   }'
 ```
 
+### Verificar Health Check
+```bash
+curl https://botiva.onrender.com/health
+```
+
 ### Actualizar estado de pago (Admin)
 ```bash
-curl -X PATCH http://localhost:3001/api/orders/{order_id} \
+curl -X PATCH https://botiva.onrender.com/api/orders/{order_id} \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
   -d '{"payment_status": "pagado"}'
@@ -202,8 +219,14 @@ curl -X PATCH http://localhost:3001/api/orders/{order_id} \
 
 ### Actualizar estado de pago (Rider)
 ```bash
-curl -X PATCH http://localhost:3001/api/orders/{order_id}/payment-status \
+curl -X PATCH https://botiva.onrender.com/api/orders/{order_id}/payment-status \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_RIDER_TOKEN" \
   -d '{"payment_status": "pagado"}'
 ```
+
+## 🔗 Enlaces Útiles
+
+- **Panel de Administración:** https://botiva.vercel.app
+- **Health Check Backend:** https://botiva.onrender.com/health
+- **API Base URL:** https://botiva.onrender.com/api
