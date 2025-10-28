@@ -1,0 +1,44 @@
+{
+  "description": "Ejemplo de webhook para n8n que envía pedidos a Ala Burguer",
+  "endpoint": "http://localhost:3001/api/orders",
+  "method": "POST",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "external_id": "wh_{{$json.messageId}}",
+    "customer_name": "{{$json.customerName}}",
+    "customer_phone": "{{$json.customerPhone}}",
+    "customer_address": "{{$json.customerAddress}}",
+    "items": [
+      {
+        "product_id": "uuid-del-producto-1",
+        "name": "Hamburguesa Clásica",
+        "quantity": 2,
+        "unit_price": 1200
+      },
+      {
+        "product_id": "uuid-del-producto-2",
+        "name": "Papas Fritas",
+        "quantity": 1,
+        "unit_price": 500
+      }
+    ],
+    "total_amount": 2900,
+    "payment_method": "efectivo"
+  },
+  "instructions": {
+    "1": "Configura un nodo de WhatsApp en n8n",
+    "2": "Extrae los datos del mensaje (nombre, teléfono, dirección, items)",
+    "3": "Usa un nodo HTTP Request para enviar a este endpoint",
+    "4": "Asegúrate de que external_id sea único (puede ser el ID del mensaje)",
+    "5": "El sistema automáticamente creará el pedido y lo mostrará en el panel"
+  },
+  "notes": [
+    "El external_id debe ser único para evitar duplicados",
+    "Los product_id deben ser UUIDs válidos de productos existentes en la base de datos",
+    "El total_amount debe coincidir con la suma de (quantity * unit_price) de todos los items",
+    "payment_method puede ser: efectivo, tarjeta, transferencia, etc."
+  ]
+}
+

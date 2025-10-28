@@ -1,0 +1,19 @@
+# Netlify Configuration
+# Si eliges Netlify en lugar de Vercel, usa esta configuración
+
+[build]
+  base = "Frontend"
+  publish = "Frontend/dist"
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[context.production.environment]
+  NODE_ENV = "production"
+

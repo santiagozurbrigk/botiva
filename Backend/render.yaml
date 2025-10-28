@@ -1,0 +1,23 @@
+# Render.com Blueprint Configuration
+# Este archivo permite deploy automático en Render.com
+
+services:
+  - type: web
+    name: botiva-backend
+    env: node
+    region: oregon  # o virginia, frankfurt, etc.
+    plan: free  # o starter ($7/mes) para sin sleep
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000  # Render asigna automáticamente, pero esto funciona
+      # IMPORTANTE: Agrega estas variables en el dashboard de Render:
+      # - SUPABASE_URL
+      # - SUPABASE_SERVICE_ROLE_KEY
+      # - SUPABASE_ANON_KEY
+      # - CORS_ORIGIN (URL de tu frontend)
+    healthCheckPath: /health
+

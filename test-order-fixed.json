@@ -1,0 +1,22 @@
+{
+  "external_id": "test_001",
+  "customer_name": "María García",
+  "customer_phone": "+54911xxxxxxx",
+  "customer_address": "Av. Corrientes 1234, CABA",
+  "items": [
+    {
+      "product_id": "550e8400-e29b-41d4-a716-446655440001",
+      "name": "Hamburguesa Clásica",
+      "quantity": 2,
+      "unit_price": 1200
+    },
+    {
+      "product_id": "550e8400-e29b-41d4-a716-446655440002",
+      "name": "Papas Fritas",
+      "quantity": 1,
+      "unit_price": 500
+    }
+  ],
+  "total_amount": 2900,
+  "payment_method": "efectivo"
+}
