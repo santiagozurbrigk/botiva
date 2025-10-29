@@ -13,14 +13,20 @@ export const authenticateAdmin = async (req, res, next) => {
     const { supabaseAdmin } = req.app.locals;
 
     // Verificar el token
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-    console.log('Auth middleware - User:', user);
-    console.log('Auth middleware - Error:', error);
-
-    if (error || !user) {
-      console.log('Auth middleware - Invalid token or user');
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
+    
+    if (error) {
+      console.log('Auth middleware - Error:', error.message || error);
       return res.status(401).json({ error: 'Token inválido' });
     }
+
+    if (!data || !data.user) {
+      console.log('Auth middleware - No user data');
+      return res.status(401).json({ error: 'Token inválido' });
+    }
+
+    const { user } = data;
+    console.log('Auth middleware - User authenticated:', user.email);
 
     // Verificar si es admin
     const { data: admin, error: adminError } = await supabaseAdmin

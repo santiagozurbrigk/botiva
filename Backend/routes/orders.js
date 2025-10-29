@@ -122,6 +122,12 @@ router.get('/:id', async (req, res) => {
     const { supabaseAdmin } = req.app.locals;
     const { id } = req.params;
 
+    // Validar que el ID sea un UUID válido
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return res.status(400).json({ error: 'ID de pedido inválido. Debe ser un UUID válido.' });
+    }
+
     const { data, error } = await supabaseAdmin
       .from('orders')
       .select(`
@@ -133,7 +139,13 @@ router.get('/:id', async (req, res) => {
       .eq('id', id)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // Si el error es porque no encontró el registro, devolver 404
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Pedido no encontrado' });
+      }
+      throw error;
+    }
 
     if (!data) {
       return res.status(404).json({ error: 'Pedido no encontrado' });
@@ -151,6 +163,12 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { status, assigned_rider_id, payment_status } = req.body;
+
+    // Validar que el ID sea un UUID válido
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return res.status(400).json({ error: 'ID de pedido inválido. Debe ser un UUID válido.' });
+    }
 
     const { supabaseAdmin } = req.app.locals;
 
@@ -212,6 +230,12 @@ router.patch('/:id/status', authenticateRider, async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
+    // Validar que el ID sea un UUID válido
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return res.status(400).json({ error: 'ID de pedido inválido. Debe ser un UUID válido.' });
+    }
+
     if (!status) {
       return res.status(400).json({ error: 'Estado requerido' });
     }
@@ -262,6 +286,12 @@ router.patch('/:id/payment-status', authenticateRider, async (req, res) => {
   try {
     const { id } = req.params;
     const { payment_status } = req.body;
+
+    // Validar que el ID sea un UUID válido
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return res.status(400).json({ error: 'ID de pedido inválido. Debe ser un UUID válido.' });
+    }
 
     if (!payment_status) {
       return res.status(400).json({ error: 'Estado de pago requerido' });
