@@ -5,7 +5,7 @@ import { api } from '../../lib/api';
 
 export default function Orders() {
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const [orders, setOrders] = useState([]);
   const [riders, setRiders] = useState([]);
   const [deliveryConfig, setDeliveryConfig] = useState(null);
@@ -28,9 +28,17 @@ export default function Orders() {
       const data = await api.getOrders(token, params);
       
       console.log('Orders data:', data);
-      setOrders(data);
+      // Asegurarse de que siempre sea un array
+      setOrders(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching orders:', error);
+      // Si es un error 401 (no autorizado), cerrar sesión
+      if (error.message && error.message.includes('No autorizado')) {
+        logout();
+        navigate('/login');
+        return;
+      }
+      setOrders([]); // Establecer array vacío en caso de error
     } finally {
       setLoading(false);
     }
@@ -41,9 +49,17 @@ export default function Orders() {
       console.log('Fetching riders with token:', token);
       const data = await api.getRiders(token);
       console.log('Riders data:', data);
-      setRiders(data);
+      // Asegurarse de que siempre sea un array
+      setRiders(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching riders:', error);
+      // Si es un error 401 (no autorizado), cerrar sesión
+      if (error.message && error.message.includes('No autorizado')) {
+        logout();
+        navigate('/login');
+        return;
+      }
+      setRiders([]); // Establecer array vacío en caso de error
     }
   };
 

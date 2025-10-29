@@ -77,7 +77,10 @@ export const api = {
     const data = await response.json();
     console.log('Response data:', data);
     
-    return data;
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al obtener pedidos');
+    }
+    return Array.isArray(data) ? data : [];
   },
 
   getOrder: async (token, id) => {
@@ -132,7 +135,11 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     });
     console.log('API: getRiders response status:', response.status);
-    return response.json();
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al obtener repartidores');
+    }
+    return Array.isArray(data) ? data : [];
   },
 
   createRider: async (token, rider) => {
@@ -173,7 +180,11 @@ export const api = {
     const response = await fetch(`${API_URL}/api/finances/summary?${queryString}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    return response.json();
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al obtener resumen financiero');
+    }
+    return data;
   },
 
   getPayments: async (token) => {
@@ -202,7 +213,11 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     });
     console.log('API: getDeliveryConfig response status:', response.status);
-    return response.json();
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al obtener configuración de entrega');
+    }
+    return data;
   },
 
   updateDeliveryConfig: async (token, config) => {

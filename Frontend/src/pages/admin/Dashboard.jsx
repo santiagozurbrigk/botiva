@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
-import { Link } from 'react-router-dom';
 
 export default function Dashboard() {
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
+  const navigate = useNavigate();
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -12,15 +13,43 @@ export default function Dashboard() {
     const fetchSummary = async () => {
       try {
         const data = await api.getFinanceSummary(token);
-        setSummary(data);
+        // Validar que data sea un objeto válido
+        if (data && typeof data === 'object' && !data.error) {
+          setSummary(data);
+        } else {
+          // Si hay un error o datos inválidos, establecer valores por defecto
+          setSummary({
+            totalSales: 0,
+            completedOrders: 0,
+            totalOrders: 0,
+            pendingPayments: 0,
+          });
+        }
       } catch (error) {
         console.error('Error fetching summary:', error);
+        // Si es un error 401 (no autorizado), cerrar sesión
+        if (error.message && error.message.includes('No autorizado')) {
+          logout();
+          navigate('/login');
+          return;
+        }
+        // Establecer valores por defecto en caso de error
+        setSummary({
+          totalSales: 0,
+          completedOrders: 0,
+          totalOrders: 0,
+          pendingPayments: 0,
+        });
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSummary();
+    if (token) {
+      fetchSummary();
+    } else {
+      setLoading(false);
+    }
   }, [token]);
 
   if (loading) {
