@@ -32,10 +32,44 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
+// Configurar CORS - permitir múltiples orígenes si es necesario
+const allowedOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+  : ['*'];
+
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: (origin, callback) => {
+    // Si no hay origen (como en requests desde Postman), permitir
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Si CORS_ORIGIN es '*', permitir todo
+    if (allowedOrigins.includes('*')) {
+      return callback(null, true);
+    }
+    
+    // Remover trailing slash y path del origen para comparar solo el dominio
+    const originWithoutPath = origin.split('/').slice(0, 3).join('/'); // Solo protocolo + dominio + puerto
+    
+    // Verificar si el origen (sin path) está en la lista permitida
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      const allowedWithoutPath = allowedOrigin.split('/').slice(0, 3).join('/');
+      return originWithoutPath === allowedWithoutPath;
+    });
+    
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️ CORS bloqueado: origen ${origin} no está en la lista permitida`);
+      callback(new Error('No permitido por CORS'));
+    }
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 };
+
 app.use(cors(corsOptions));
 app.use(express.json());
 
