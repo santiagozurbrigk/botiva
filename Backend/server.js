@@ -11,6 +11,23 @@ import deliveryConfigRoutes from './routes/delivery-config.js';
 
 dotenv.config();
 
+console.log('🔧 Iniciando servidor...');
+console.log('📦 Variables de entorno cargadas');
+console.log('🌐 NODE_ENV:', process.env.NODE_ENV || 'no definido');
+console.log('🔌 PORT:', process.env.PORT || 'no definido (usará 3001)');
+
+// Validar variables críticas de Supabase
+const requiredEnvVars = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_ANON_KEY'];
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingVars.length > 0) {
+  console.error('❌ ERROR: Variables de entorno faltantes:', missingVars.join(', '));
+  console.error('⚠️ El servidor no puede iniciar sin estas variables.');
+  process.exit(1);
+}
+
+console.log('✅ Todas las variables de entorno requeridas están presentes');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -23,31 +40,55 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // Supabase clients
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+console.log('🔗 Inicializando clientes de Supabase...');
+try {
+  const supabaseAdmin = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
 
-const supabaseAnon = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
+  const supabaseAnon = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_ANON_KEY
+  );
 
-// Make Supabase clients available to routes
-app.locals.supabaseAdmin = supabaseAdmin;
-app.locals.supabaseAnon = supabaseAnon;
+  // Make Supabase clients available to routes
+  app.locals.supabaseAdmin = supabaseAdmin;
+  app.locals.supabaseAnon = supabaseAnon;
+  
+  console.log('✅ Clientes de Supabase inicializados correctamente');
+} catch (error) {
+  console.error('❌ ERROR al inicializar Supabase:', error.message);
+  process.exit(1);
+}
 
 // Routes
+console.log('🛣️ Configurando rutas...');
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/riders', ridersRoutes);
 app.use('/api/finances', financesRoutes);
 app.use('/api/delivery-config', deliveryConfigRoutes);
+console.log('✅ Rutas configuradas');
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  console.log('💚 Health check solicitado');
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Botiva API - Backend funcionando correctamente',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Error handling middleware
@@ -58,7 +99,32 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-  console.log(`🌐 Health check disponible en /health`);
+// Iniciar servidor
+console.log('🚀 Iniciando servidor HTTP...');
+
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Servidor iniciado exitosamente`);
+  console.log(`🔌 Puerto: ${PORT}`);
+  console.log(`🌐 Health check: http://0.0.0.0:${PORT}/health`);
+  console.log(`📡 Servidor listo para recibir peticiones`);
+});
+
+// Manejo de errores del servidor
+server.on('error', (error) => {
+  console.error('❌ ERROR al iniciar el servidor:', error.message);
+  if (error.code === 'EADDRINUSE') {
+    console.error(`⚠️ El puerto ${PORT} ya está en uso`);
+  }
+  process.exit(1);
+});
+
+// Manejo de errores no capturados
+process.on('uncaughtException', (error) => {
+  console.error('❌ ERROR no capturado:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Promise rechazada no manejada:', reason);
+  process.exit(1);
 });
