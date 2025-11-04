@@ -19,7 +19,7 @@ El agente de IA envía el pedido completo como un string (ej: "2 melt y 3 simple
 
 **Nodo:** `Code` (o `Function`)
 
-**Código JavaScript:**
+**Código JavaScript (Si `pedido` es un STRING):**
 
 ```javascript
 // Obtener el string del pedido desde el nodo anterior
@@ -87,22 +87,120 @@ return {
 };
 ```
 
+**Código JavaScript (Si `pedido` es un ARRAY de objetos) - ⭐ USAR ESTE:**
+
+```javascript
+// Obtener TODOS los datos del nodo anterior
+const inputData = $input.item.json;
+
+// Obtener el array de pedido (puede venir como 'pedido' o 'T pedido')
+const pedidoArray = inputData.pedido || inputData['T pedido'] || [];
+
+// Obtener datos del cliente desde cualquier nodo anterior
+const customerName = inputData['T nombre'] || inputData.customer_name || inputData.nombre || '';
+const customerPhone = inputData['# chat_id'] || inputData.phone || inputData.telefono || '';
+const customerAddress = inputData['T direccion'] || inputData.direccion || inputData.address || '';
+const montoTotal = inputData['# monto'] || inputData.monto || inputData.total_amount || 0;
+const paymentMethod = inputData['T pago'] || inputData.payment_method || inputData.pago || 'efectivo';
+const externalId = inputData['# chat_id'] || inputData.external_id || '';
+const timestamp = inputData['# timestamp'] || inputData.timestamp || Date.now();
+
+// Convertir array de pedido a items del API
+const items = [];
+
+if (Array.isArray(pedidoArray)) {
+  pedidoArray.forEach((item, index) => {
+    const cantidad = item['# cantidad'] || item.cantidad || item.quantity || 1;
+    const nombre = item['T nombre'] || item.nombre || item.name || `Producto ${index + 1}`;
+    
+    items.push({
+      product_id: null,
+      name: nombre,
+      quantity: cantidad,
+      unit_price: 0 // Se calculará después
+    });
+  });
+}
+
+// Calcular precio unitario (dividir total entre cantidad total de items)
+const cantidadTotal = items.reduce((sum, item) => sum + item.quantity, 0);
+const precioPorUnidad = cantidadTotal > 0 ? montoTotal / cantidadTotal : 0;
+
+// Asignar precio unitario a cada item
+items.forEach(item => {
+  item.unit_price = Math.round(precioPorUnidad);
+});
+
+// Calcular total real (para verificación)
+const totalCalculado = items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+
+// Retornar resultado con TODOS los datos necesarios
+return {
+  json: {
+    // Datos del cliente
+    'T nombre': customerName,
+    '# chat_id': customerPhone,
+    'T direccion': customerAddress,
+    '# monto': montoTotal,
+    'T pago': paymentMethod,
+    '# timestamp': timestamp,
+    
+    // Items parseados
+    items: items,
+    total_amount: totalCalculado,
+    
+    // Mantener todos los campos originales
+    ...inputData,
+    
+    // Flags útiles
+    items_parsed: true,
+    external_id: externalId ? `${externalId}_${timestamp}` : `order_${timestamp}`
+  }
+};
+```
+
 #### Paso 2: Configurar HTTP Request
 
-**En el nodo HTTP Request, usa:**
+**En el nodo HTTP Request, configura:**
+
+1. **Method:** `POST`
+2. **URL:** `https://tu-backend.onrender.com/api/orders`
+3. **Authentication:** `Header Auth` → `Authorization` → `Bearer {{ $json.token }}` (si es necesario)
+4. **Send Body:** ✅ Activado
+5. **Body Content Type:** `JSON`
+6. **Specify Body:** `Using JSON`
+
+**JSON Body (IMPORTANTE: Usar expresiones de n8n para items):**
 
 ```json
 {
-  "external_id": "{{ $json['# chat_id'] }}_{{ $json['# timestamp'] }}",
+  "external_id": "{{ $json.external_id || ($json['# chat_id'] + '_' + $json['# timestamp']) }}",
+  "customer_name": "{{ $json['T nombre'] }}",
+  "customer_phone": "{{ $json['# chat_id'] }}",
+  "customer_address": "{{ $json['T direccion'] }}",
+  "items": {{ JSON.stringify($json.items) }},
+  "total_amount": {{ $json.total_amount || $json['# monto'] }},
+  "payment_method": "{{ $json['T pago'] || 'efectivo' }}",
+  "payment_status": "pendiente"
+}
+```
+
+**⚠️ IMPORTANTE:** Si `JSON.stringify()` no funciona, usa esta alternativa:
+
+```json
+{
+  "external_id": "{{ $json.external_id || ($json['# chat_id'] + '_' + $json['# timestamp']) }}",
   "customer_name": "{{ $json['T nombre'] }}",
   "customer_phone": "{{ $json['# chat_id'] }}",
   "customer_address": "{{ $json['T direccion'] }}",
   "items": {{ $json.items }},
-  "total_amount": {{ $json.total_amount }},
-  "payment_method": "{{ $json['T pago'] }}",
+  "total_amount": {{ $json.total_amount || $json['# monto'] }},
+  "payment_method": "{{ $json['T pago'] || 'efectivo' }}",
   "payment_status": "pendiente"
 }
 ```
+
+**Nota:** n8n debería convertir automáticamente `{{ $json.items }}` a JSON array si `items` es un array en el nodo anterior.
 
 ---
 
