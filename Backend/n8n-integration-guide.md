@@ -152,8 +152,80 @@ Cliente/Admin → https://botiva.vercel.app
 
 **Nota:** 
 - Reemplaza los nombres de campos (`{{ $json['campo'] }}`) con los nombres exactos de tus columnas en n8n
-- Si `T pedido` contiene múltiples productos, necesitarás parsear el string y crear múltiples items
+- Si `T pedido` contiene múltiples productos (ej: "2 melt y 3 simple"), necesitas parsear el string antes de enviarlo
+- **Ver guía completa:** `n8n-parse-pedido-solution.md` para parsear pedidos completos en items
 - `product_id` puede ser `null` si no tienes el UUID del producto en tu base de datos
+
+### ⚠️ Parsear Pedido Completo en Items
+
+Si tu agente envía el pedido completo como string (ej: "2 melt y 3 simple"), necesitas parsearlo antes del HTTP Request:
+
+**Opción Rápida: Agregar nodo "Code" entre el agente y HTTP Request**
+
+1. **Nodo Code** - Parsear el string:
+```javascript
+const pedidoTexto = $input.item.json['T pedido'] || '';
+const montoTotal = $input.item.json['# monto'] || 0;
+
+function parsearPedido(pedidoTexto) {
+  const items = [];
+  const productos = pedidoTexto.split(/\s+y\s+|\s*,\s*/).map(p => p.trim());
+  
+  productos.forEach(producto => {
+    const match = producto.match(/^(\d+)\s+(.+)$/);
+    if (match) {
+      items.push({
+        product_id: null,
+        name: match[2].trim(),
+        quantity: parseInt(match[1]),
+        unit_price: 0
+      });
+    } else {
+      items.push({
+        product_id: null,
+        name: producto,
+        quantity: 1,
+        unit_price: 0
+      });
+    }
+  });
+  return items;
+}
+
+const items = parsearPedido(pedidoTexto);
+const cantidadTotal = items.reduce((sum, item) => sum + item.quantity, 0);
+const precioPorUnidad = cantidadTotal > 0 ? montoTotal / cantidadTotal : 0;
+
+items.forEach(item => {
+  item.unit_price = Math.round(precioPorUnidad);
+});
+
+const totalCalculado = items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+
+return {
+  json: {
+    ...$input.item.json,
+    items: items,
+    total_amount: totalCalculado
+  }
+};
+```
+
+2. **HTTP Request** - Usar items parseados:
+```json
+{
+  "external_id": "{{ $json['# chat_id'] }}_{{ $json['# timestamp'] }}",
+  "customer_name": "{{ $json['T nombre'] }}",
+  "customer_phone": "{{ $json['# chat_id'] }}",
+  "customer_address": "{{ $json['T direccion'] }}",
+  "items": {{ $json.items }},
+  "total_amount": {{ $json.total_amount }},
+  "payment_method": "{{ $json['T pago'] }}",
+  "payment_status": "pendiente"
+}
+```
+
+📄 **Ver guía completa con todas las opciones:** `n8n-parse-pedido-solution.md`
 
 **Workflow 2: Actualizar Estado de Pago (requiere autenticación)**
 
