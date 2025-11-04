@@ -24,17 +24,40 @@ const pedidoArray = inputData.pedido || inputData['T pedido'] || [];
 
 // Obtener datos del cliente desde cualquier nodo anterior
 // Busca en múltiples ubicaciones posibles
-const customerName = inputData['T nombre'] 
+// IMPORTANTE: n8n puede tener campos con espacios o caracteres especiales
+let customerName = inputData['T nombre'] 
+  || inputData['T name'] 
   || inputData.customer_name 
   || inputData.nombre 
-  || inputData['AI Agent1']?.['T nombre']
+  || inputData.name
   || '';
 
-const customerPhone = inputData['# chat_id'] 
+// Si está vacío, intentar buscar en nodos anteriores
+if (!customerName) {
+  // Intentar acceder a nodos anteriores si es necesario
+  try {
+    const prevNode = $('AI Agent1')?.item?.json;
+    if (prevNode) {
+      customerName = prevNode['T nombre'] || prevNode['T name'] || prevNode.nombre || '';
+    }
+  } catch(e) {}
+}
+
+let customerPhone = inputData['# chat_id'] 
+  || inputData['chat_id']
   || inputData.phone 
   || inputData.telefono 
-  || inputData['AI Agent1']?.['# chat_id']
   || '';
+
+// Si está vacío, intentar buscar en nodos anteriores
+if (!customerPhone) {
+  try {
+    const prevNode = $('AI Agent1')?.item?.json;
+    if (prevNode) {
+      customerPhone = prevNode['# chat_id'] || prevNode.chat_id || prevNode.phone || '';
+    }
+  } catch(e) {}
+}
 
 const customerAddress = inputData['T direccion'] 
   || inputData.direccion 
@@ -71,12 +94,21 @@ if (Array.isArray(pedidoArray)) {
     const cantidad = item['# cantidad'] || item.cantidad || item.quantity || 1;
     const nombre = item['T nombre'] || item.nombre || item.name || `Producto ${index + 1}`;
     
-    items.push({
-      product_id: null,
+    // Crear objeto item - omitir product_id si es null (evita problemas de serialización)
+    const itemObj = {
       name: nombre,
       quantity: cantidad,
-      unit_price: 0 // Se calculará después
-    });
+      unit_price: 0
+    };
+    
+    // Solo agregar product_id si tiene un valor válido
+    const productId = item.product_id || item['product_id'];
+    if (productId && productId !== null && productId !== 'null' && productId !== '') {
+      itemObj.product_id = productId;
+    }
+    // Si es null, simplemente no lo incluimos (el backend lo acepta como null de todas formas)
+    
+    items.push(itemObj);
   });
 }
 
@@ -121,15 +153,21 @@ const finalExternalId = externalId ? `${externalId}_${timestamp}` : `order_${tim
 // Retornar resultado con TODOS los datos necesarios
 return {
   json: {
-    // Datos del cliente (prioridad a los encontrados)
+    // Datos del cliente (con múltiples nombres para compatibilidad)
     'T nombre': customerName,
+    customer_name: customerName, // También agregar sin el prefijo T
     '# chat_id': customerPhone,
+    chat_id: customerPhone, // También agregar sin el prefijo #
+    customer_phone: customerPhone,
     'T direccion': customerAddress,
+    customer_address: customerAddress,
+    direccion: customerAddress,
     '# monto': montoTotal,
     'T pago': paymentMethod,
+    payment_method: paymentMethod,
     '# timestamp': timestamp,
     
-    // Items parseados
+    // Items parseados (sin product_id null)
     items: items,
     total_amount: totalCalculado || montoTotal,
     
