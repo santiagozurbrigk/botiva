@@ -190,12 +190,27 @@ return {
 ```json
 {
   "external_id": "{{ $json.external_id }}",
-  "customer_name": "{{ $json['T nombre'] }}",
-  "customer_phone": "{{ $json['# chat_id'] }}",
-  "customer_address": "{{ $json['T direccion'] }}",
+  "customer_name": "{{ $json.customer_name || $json['T nombre'] || '' }}",
+  "customer_phone": "{{ $json.customer_phone || $json.chat_id || $json['# chat_id'] || '' }}",
+  "customer_address": "{{ $json.customer_address || $json['T direccion'] || $json.direccion || '' }}",
+  "items": {{ JSON.stringify($json.items) }},
+  "total_amount": {{ $json.total_amount || $json['# monto'] || 0 }},
+  "payment_method": "{{ $json.payment_method || $json['T pago'] || 'efectivo' }}",
+  "payment_status": "pendiente"
+}
+```
+
+**⚠️ Si `JSON.stringify()` da error, usa esta alternativa (sin JSON.stringify):**
+
+```json
+{
+  "external_id": "{{ $json.external_id }}",
+  "customer_name": "{{ $json.customer_name || $json['T nombre'] || '' }}",
+  "customer_phone": "{{ $json.customer_phone || $json.chat_id || $json['# chat_id'] || '' }}",
+  "customer_address": "{{ $json.customer_address || $json['T direccion'] || $json.direccion || '' }}",
   "items": {{ $json.items }},
-  "total_amount": {{ $json.total_amount }},
-  "payment_method": "{{ $json['T pago'] }}",
+  "total_amount": {{ $json.total_amount || $json['# monto'] || 0 }},
+  "payment_method": "{{ $json.payment_method || $json['T pago'] || 'efectivo' }}",
   "payment_status": "pendiente"
 }
 ```

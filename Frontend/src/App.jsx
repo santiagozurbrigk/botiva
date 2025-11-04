@@ -5,6 +5,7 @@ import AdminLayout from './components/admin/AdminLayout';
 import RiderLayout from './components/rider/RiderLayout';
 import Dashboard from './pages/admin/Dashboard';
 import Products from './pages/admin/Products';
+import Extras from './pages/admin/Extras';
 import Orders from './pages/admin/Orders';
 import OrderDetail from './pages/admin/OrderDetail';
 import Riders from './pages/admin/Riders';
@@ -48,6 +49,7 @@ function AppRoutes() {
                 <Route path="orders" element={<Orders />} />
                 <Route path="orders/:id" element={<OrderDetail />} />
                 <Route path="products" element={<Products />} />
+                <Route path="extras" element={<Extras />} />
                 <Route path="riders" element={<Riders />} />
                 <Route path="delivery-config" element={<DeliveryConfig />} />
               </Routes>

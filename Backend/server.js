@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import productsRoutes from './routes/products.js';
+import extrasRoutes from './routes/extras.js';
 import ordersRoutes from './routes/orders.js';
 import ridersRoutes from './routes/riders.js';
 import authRoutes from './routes/auth.js';
@@ -100,6 +101,7 @@ try {
 console.log('🛣️ Configurando rutas...');
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productsRoutes);
+app.use('/api/extras', extrasRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/riders', ridersRoutes);
 app.use('/api/finances', financesRoutes);

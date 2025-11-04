@@ -60,6 +60,46 @@ export const api = {
     return response.json();
   },
 
+  // Extras
+  getExtras: async (token) => {
+    const response = await fetch(`${API_URL}/api/extras`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.json();
+  },
+
+  createExtra: async (token, extra) => {
+    const response = await fetch(`${API_URL}/api/extras`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(extra),
+    });
+    return response.json();
+  },
+
+  updateExtra: async (token, id, extra) => {
+    const response = await fetch(`${API_URL}/api/extras/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(extra),
+    });
+    return response.json();
+  },
+
+  deleteExtra: async (token, id) => {
+    const response = await fetch(`${API_URL}/api/extras/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.json();
+  },
+
   // Orders
   getOrders: async (token, params = {}) => {
     const queryString = new URLSearchParams(params).toString();
