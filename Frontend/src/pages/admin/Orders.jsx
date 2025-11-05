@@ -143,70 +143,134 @@ export default function Orders() {
   };
 
   const removeItem = (index) => {
-    const newItems = formData.items.filter((_, i) => i !== index);
-    setFormData({ ...formData, items: newItems });
-    calculateTotal(newItems);
+    setFormData(prevFormData => {
+      const newItems = prevFormData.items.filter((_, i) => i !== index);
+      const total = newItems.reduce((sum, item) => {
+        const itemTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+        const extrasTotal = (item.extras || []).reduce((extraSum, extra) => {
+          return extraSum + (parseFloat(extra.unit_price) || 0);
+        }, 0);
+        return sum + itemTotal + extrasTotal;
+      }, 0);
+      return {
+        ...prevFormData,
+        items: newItems,
+        total_amount: total.toFixed(2),
+      };
+    });
   };
 
   const updateItem = (index, field, value) => {
-    const newItems = [...formData.items];
-    if (field === 'product_id') {
-      const product = products.find(p => p.id === value);
-      const price = product ? (typeof product.price === 'string' ? parseFloat(product.price.replace(',', '.')) : parseFloat(product.price)) : 0;
-      newItems[index] = {
-        ...newItems[index],
-        product_id: value || null,
-        name: product ? product.name : '',
-        unit_price: price || 0,
+    setFormData(prevFormData => {
+      const newItems = [...prevFormData.items];
+      if (field === 'product_id') {
+        const product = products.find(p => p.id === value);
+        let price = 0;
+        if (product) {
+          if (typeof product.price === 'string') {
+            price = parseFloat(product.price.replace(',', '.')) || 0;
+          } else {
+            price = parseFloat(product.price) || 0;
+          }
+        }
+        newItems[index] = {
+          ...newItems[index],
+          product_id: value || null,
+          name: product ? product.name : '',
+          unit_price: price,
+        };
+      } else if (field === 'quantity') {
+        const numValue = parseFloat(value) || 1;
+        newItems[index] = { ...newItems[index], quantity: numValue };
+      } else if (field === 'unit_price') {
+        const numValue = parseFloat(value) || 0;
+        newItems[index] = { ...newItems[index], unit_price: numValue };
+      } else {
+        newItems[index] = { ...newItems[index], [field]: value };
+      }
+      
+      // Calcular total con los nuevos items
+      const total = newItems.reduce((sum, item) => {
+        const itemTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+        const extrasTotal = (item.extras || []).reduce((extraSum, extra) => {
+          return extraSum + (parseFloat(extra.unit_price) || 0);
+        }, 0);
+        return sum + itemTotal + extrasTotal;
+      }, 0);
+      
+      return {
+        ...prevFormData,
+        items: newItems,
+        total_amount: total.toFixed(2),
       };
-    } else if (field === 'quantity' || field === 'unit_price') {
-      const numValue = parseFloat(value) || 0;
-      newItems[index] = { ...newItems[index], [field]: numValue };
-    } else {
-      newItems[index] = { ...newItems[index], [field]: value };
-    }
-    setFormData({ ...formData, items: newItems });
-    calculateTotal(newItems);
+    });
   };
 
   const addExtraToItem = (itemIndex, extraId) => {
-    const newItems = [...formData.items];
-    const extra = extras.find(e => e.id === extraId);
-    if (!extra) return;
+    setFormData(prevFormData => {
+      const newItems = [...prevFormData.items];
+      const extra = extras.find(e => e.id === extraId);
+      if (!extra) return prevFormData;
 
-    if (!newItems[itemIndex].extras) {
-      newItems[itemIndex].extras = [];
-    }
+      if (!newItems[itemIndex].extras) {
+        newItems[itemIndex].extras = [];
+      }
 
-    const extraPrice = typeof extra.price === 'string' ? parseFloat(extra.price.replace(',', '.')) : parseFloat(extra.price);
-    newItems[itemIndex].extras.push({
-      extra_id: extra.id,
-      name: extra.name,
-      unit_price: extraPrice || 0,
+      const extraPrice = typeof extra.price === 'string' ? parseFloat(extra.price.replace(',', '.')) : parseFloat(extra.price);
+      newItems[itemIndex].extras.push({
+        extra_id: extra.id,
+        name: extra.name,
+        unit_price: extraPrice || 0,
+      });
+
+      const total = newItems.reduce((sum, item) => {
+        const itemTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+        const extrasTotal = (item.extras || []).reduce((extraSum, extra) => {
+          return extraSum + (parseFloat(extra.unit_price) || 0);
+        }, 0);
+        return sum + itemTotal + extrasTotal;
+      }, 0);
+
+      return {
+        ...prevFormData,
+        items: newItems,
+        total_amount: total.toFixed(2),
+      };
     });
-
-    setFormData({ ...formData, items: newItems });
-    calculateTotal(newItems);
   };
 
   const removeExtraFromItem = (itemIndex, extraIndex) => {
-    const newItems = [...formData.items];
-    if (newItems[itemIndex].extras) {
-      newItems[itemIndex].extras = newItems[itemIndex].extras.filter((_, i) => i !== extraIndex);
-    }
-    setFormData({ ...formData, items: newItems });
-    calculateTotal(newItems);
+    setFormData(prevFormData => {
+      const newItems = [...prevFormData.items];
+      if (newItems[itemIndex].extras) {
+        newItems[itemIndex].extras = newItems[itemIndex].extras.filter((_, i) => i !== extraIndex);
+      }
+
+      const total = newItems.reduce((sum, item) => {
+        const itemTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+        const extrasTotal = (item.extras || []).reduce((extraSum, extra) => {
+          return extraSum + (parseFloat(extra.unit_price) || 0);
+        }, 0);
+        return sum + itemTotal + extrasTotal;
+      }, 0);
+
+      return {
+        ...prevFormData,
+        items: newItems,
+        total_amount: total.toFixed(2),
+      };
+    });
   };
 
-  const calculateTotal = (items = formData.items) => {
-    const total = items.reduce((sum, item) => {
+  const calculateTotal = () => {
+    const total = formData.items.reduce((sum, item) => {
       const itemTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
       const extrasTotal = (item.extras || []).reduce((extraSum, extra) => {
         return extraSum + (parseFloat(extra.unit_price) || 0);
       }, 0);
       return sum + itemTotal + extrasTotal;
     }, 0);
-    setFormData({ ...formData, total_amount: total.toFixed(2) });
+    setFormData(prev => ({ ...prev, total_amount: total.toFixed(2) }));
   };
 
   const handleCreateOrder = async (e) => {
@@ -570,7 +634,12 @@ export default function Orders() {
                                 ))}
                               </select>
                               {item.name && (
-                                <p className="mt-1 text-sm font-medium text-gray-900">{item.name}</p>
+                                <div className="mt-2 p-2 bg-indigo-50 rounded-md border border-indigo-200">
+                                  <p className="text-sm font-semibold text-indigo-900">{item.name}</p>
+                                  {item.unit_price > 0 && (
+                                    <p className="text-xs text-indigo-700">Precio: ${item.unit_price}</p>
+                                  )}
+                                </div>
                               )}
                             </div>
                             <div>
