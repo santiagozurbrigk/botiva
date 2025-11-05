@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { createSupabaseClientWithToken } from '../lib/supabase';
+import { getSupabaseClient } from '../lib/supabase';
 
 export function useRealtimeOrders(token, filter = '', fetchInitialOrders) {
   const [orders, setOrders] = useState([]);
@@ -13,8 +13,8 @@ export function useRealtimeOrders(token, filter = '', fetchInitialOrders) {
       return;
     }
 
-    // Crear cliente de Supabase con el token
-    const supabaseClient = createSupabaseClientWithToken(token);
+    // Obtener cliente singleton de Supabase con el token
+    const supabaseClient = getSupabaseClient(token);
     supabaseClientRef.current = supabaseClient;
 
     // Cargar pedidos iniciales
