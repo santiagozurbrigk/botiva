@@ -105,9 +105,7 @@ export default function Orders() {
 
   const fetchRiders = async () => {
     try {
-      console.log('Fetching riders with token:', token);
       const data = await api.getRiders(token);
-      console.log('Riders data:', data);
       // Asegurarse de que siempre sea un array
       setRiders(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -124,9 +122,7 @@ export default function Orders() {
 
   const fetchDeliveryConfig = async () => {
     try {
-      console.log('Fetching delivery config with token:', token);
       const data = await api.getDeliveryConfig(token);
-      console.log('Delivery config data:', data);
       setDeliveryConfig(data);
     } catch (error) {
       console.error('Error fetching delivery config:', error);

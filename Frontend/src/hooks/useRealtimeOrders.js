@@ -45,7 +45,10 @@ export function useRealtimeOrders(token, filter = '', fetchInitialOrders) {
           table: 'orders',
         },
         async (payload) => {
-          console.log('Cambio recibido en tiempo real:', payload);
+          // Solo loguear en desarrollo (no en producción)
+          if (import.meta.env.DEV) {
+            console.log('Cambio recibido en tiempo real:', payload.eventType, payload.new?.id || payload.old?.id);
+          }
           
           if (payload.eventType === 'INSERT') {
             // Nuevo pedido creado - necesitamos obtener los datos completos
@@ -115,7 +118,12 @@ export function useRealtimeOrders(token, filter = '', fetchInitialOrders) {
         }
       )
       .subscribe((status) => {
-        console.log('Estado de suscripción Realtime:', status);
+        // Solo loguear cambios de estado importantes
+        if (status === 'SUBSCRIBED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          if (import.meta.env.DEV) {
+            console.log('Realtime:', status);
+          }
+        }
       });
 
     channelRef.current = channel;

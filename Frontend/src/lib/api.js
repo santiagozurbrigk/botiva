@@ -120,18 +120,12 @@ export const api = {
   getOrders: async (token, params = {}) => {
     const queryString = new URLSearchParams(params).toString();
     const url = `${API_URL}/api/orders?${queryString}`;
-    console.log('API URL:', url);
-    console.log('Token being sent:', token);
     
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
     });
     
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers);
-    
     const data = await response.json();
-    console.log('Response data:', data);
     
     if (!response.ok) {
       throw new Error(data.error || 'Error al obtener pedidos');
@@ -186,11 +180,9 @@ export const api = {
 
   // Riders
   getRiders: async (token) => {
-    console.log('API: getRiders called with token:', token);
     const response = await fetch(`${API_URL}/api/riders`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    console.log('API: getRiders response status:', response.status);
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.error || 'Error al obtener repartidores');
@@ -264,11 +256,9 @@ export const api = {
 
   // Delivery Config
   getDeliveryConfig: async (token) => {
-    console.log('API: getDeliveryConfig called with token:', token);
     const response = await fetch(`${API_URL}/api/delivery-config`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    console.log('API: getDeliveryConfig response status:', response.status);
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.error || 'Error al obtener configuración de entrega');
