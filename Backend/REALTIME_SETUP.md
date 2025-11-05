@@ -23,11 +23,32 @@ VITE_SUPABASE_URL=tu_url_de_supabase
 VITE_SUPABASE_ANON_KEY=tu_anon_key_de_supabase
 ```
 
-### 3. Verificar en Supabase Dashboard
+### 3. Verificar que Realtime esté habilitado
 
-1. Ve a **Database** → **Replication**
-2. Verifica que la tabla `orders` esté habilitada para Realtime
-3. Deberías ver un icono de "broadcast" junto a la tabla
+**IMPORTANTE:** La sección "Replication" en Supabase Dashboard es para replicar datos a otros destinos (como BigQuery, Iceberg, etc.), NO para Realtime.
+
+Para verificar que Realtime está habilitado:
+
+1. Ve a **Database** → **Publications** (o ejecuta en SQL Editor):
+```sql
+SELECT * FROM pg_publication WHERE pubname = 'supabase_realtime';
+```
+
+2. Verifica que las tablas estén en la publicación:
+```sql
+SELECT tablename FROM pg_publication_tables 
+WHERE pubname = 'supabase_realtime';
+```
+
+3. Deberías ver `orders`, `order_items`, y `order_events` en la lista
+
+### 4. Habilitar Realtime en el proyecto (si no está habilitado)
+
+Si Realtime no está habilitado en tu proyecto:
+1. Ve a **Project Settings** → **API**
+2. Busca la sección "Realtime"
+3. Asegúrate de que esté habilitado
+4. En algunos planes de Supabase, Realtime puede requerir habilitación manual
 
 ## Cómo funciona
 
