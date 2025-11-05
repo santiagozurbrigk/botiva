@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
+import CustomSelect from '../../components/common/CustomSelect';
 
 export default function Orders() {
   const navigate = useNavigate();
@@ -121,6 +122,40 @@ export default function Orders() {
     return colors[paymentStatus] || 'bg-gray-100 text-gray-800';
   };
 
+  const getStatusLabel = (status) => {
+    const labels = {
+      pendiente: 'Pendiente',
+      en_proceso: 'En Proceso',
+      finalizado: 'Finalizado',
+      entregado: 'Entregado',
+    };
+    return labels[status] || status;
+  };
+
+  const getPaymentStatusLabel = (paymentStatus) => {
+    const labels = {
+      pendiente: 'Pendiente',
+      pagado: 'Pagado',
+      cancelado: 'Cancelado',
+      reembolsado: 'Reembolsado',
+    };
+    return labels[paymentStatus] || paymentStatus;
+  };
+
+  const statusOptions = [
+    { value: 'pendiente', label: 'Pendiente' },
+    { value: 'en_proceso', label: 'En Proceso' },
+    { value: 'finalizado', label: 'Finalizado' },
+    { value: 'entregado', label: 'Entregado' },
+  ];
+
+  const paymentStatusOptions = [
+    { value: 'pendiente', label: 'Pendiente' },
+    { value: 'pagado', label: 'Pagado' },
+    { value: 'cancelado', label: 'Cancelado' },
+    { value: 'reembolsado', label: 'Reembolsado' },
+  ];
+
   if (loading) {
     return <div className="text-center py-12">Cargando...</div>;
   }
@@ -237,28 +272,24 @@ export default function Orders() {
                     ${order.total_amount}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <select
+                    <CustomSelect
                       value={order.status}
-                      onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                      className={`text-xs font-semibold rounded-full px-2 py-1 ${getStatusColor(order.status)}`}
-                    >
-                      <option value="pendiente">Pendiente</option>
-                      <option value="en_proceso">En Proceso</option>
-                      <option value="finalizado">Finalizado</option>
-                      <option value="entregado">Entregado</option>
-                    </select>
+                      onChange={(newStatus) => handleStatusChange(order.id, newStatus)}
+                      options={statusOptions}
+                      getColorClass={getStatusColor}
+                      getLabel={getStatusLabel}
+                      className="min-w-[140px]"
+                    />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <select
+                    <CustomSelect
                       value={order.payment_status || 'pendiente'}
-                      onChange={(e) => handlePaymentStatusChange(order.id, e.target.value)}
-                      className={`text-xs font-semibold rounded-full px-2 py-1 ${getPaymentStatusColor(order.payment_status || 'pendiente')}`}
-                    >
-                      <option value="pendiente">Pendiente</option>
-                      <option value="pagado">Pagado</option>
-                      <option value="cancelado">Cancelado</option>
-                      <option value="reembolsado">Reembolsado</option>
-                    </select>
+                      onChange={(newPaymentStatus) => handlePaymentStatusChange(order.id, newPaymentStatus)}
+                      options={paymentStatusOptions}
+                      getColorClass={getPaymentStatusColor}
+                      getLabel={getPaymentStatusLabel}
+                      className="min-w-[140px]"
+                    />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <select

@@ -173,12 +173,21 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
     const { supabaseAdmin } = req.app.locals;
 
     const updates = {};
-    if (status !== undefined) updates.status = status;
+    if (status !== undefined) {
+      updates.status = status;
+      // Si el estado cambia a "entregado", automáticamente cambiar payment_status a "pagado"
+      if (status === 'entregado') {
+        updates.payment_status = 'pagado';
+      }
+    }
     if (assigned_rider_id !== undefined) {
       // Convertir cadena vacía a null para desasignar el repartidor
       updates.assigned_rider_id = assigned_rider_id === '' ? null : assigned_rider_id;
     }
-    if (payment_status !== undefined) updates.payment_status = payment_status;
+    // Solo actualizar payment_status si status no es "entregado" (para evitar sobrescribir)
+    if (payment_status !== undefined && status !== 'entregado') {
+      updates.payment_status = payment_status;
+    }
 
     const { data, error } = await supabaseAdmin
       .from('orders')
@@ -255,10 +264,17 @@ router.patch('/:id/status', authenticateRider, async (req, res) => {
       return res.status(403).json({ error: 'No tienes acceso a este pedido' });
     }
 
-    // Actualizar estado
+    // Preparar actualización
+    const updates = { status };
+    // Si el estado cambia a "entregado", automáticamente cambiar payment_status a "pagado"
+    if (status === 'entregado') {
+      updates.payment_status = 'pagado';
+    }
+
+    // Actualizar estado (y payment_status si es necesario)
     const { data, error } = await supabaseAdmin
       .from('orders')
-      .update({ status })
+      .update(updates)
       .eq('id', id)
       .select()
       .single();

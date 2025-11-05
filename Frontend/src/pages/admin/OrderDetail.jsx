@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
+import CustomSelect from '../../components/common/CustomSelect';
 
 export default function OrderDetail() {
   const { id } = useParams();
@@ -63,6 +64,26 @@ export default function OrderDetail() {
     return colors[paymentStatus] || 'bg-gray-100 text-gray-800';
   };
 
+  const getStatusLabel = (status) => {
+    const labels = {
+      pendiente: 'Pendiente',
+      en_proceso: 'En Proceso',
+      finalizado: 'Finalizado',
+      entregado: 'Entregado',
+    };
+    return labels[status] || status;
+  };
+
+  const getPaymentStatusLabel = (paymentStatus) => {
+    const labels = {
+      pendiente: 'Pendiente',
+      pagado: 'Pagado',
+      cancelado: 'Cancelado',
+      reembolsado: 'Reembolsado',
+    };
+    return labels[paymentStatus] || paymentStatus;
+  };
+
   if (loading) {
     return <div className="text-center py-12">Cargando...</div>;
   }
@@ -93,19 +114,19 @@ export default function OrderDetail() {
           </p>
         </div>
         <div className="flex items-center space-x-3">
-          <span className={`px-3 py-1 text-sm font-semibold rounded-full ${getStatusColor(order.status)}`}>
-            {order.status}
-          </span>
-          <select
+          <CustomSelect
             value={order.status}
-            onChange={(e) => handleStatusChange(e.target.value)}
-            className="text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-          >
-            <option value="pendiente">Pendiente</option>
-            <option value="en_proceso">En Proceso</option>
-            <option value="finalizado">Finalizado</option>
-            <option value="entregado">Entregado</option>
-          </select>
+            onChange={handleStatusChange}
+            options={[
+              { value: 'pendiente', label: 'Pendiente' },
+              { value: 'en_proceso', label: 'En Proceso' },
+              { value: 'finalizado', label: 'Finalizado' },
+              { value: 'entregado', label: 'Entregado' },
+            ]}
+            getColorClass={getStatusColor}
+            getLabel={getStatusLabel}
+            className="min-w-[160px]"
+          />
         </div>
       </div>
 
@@ -155,23 +176,21 @@ export default function OrderDetail() {
               <span className="text-gray-600">Método de Pago:</span>
               <span className="font-medium text-gray-900">{order.payment_method || 'No especificado'}</span>
             </div>
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Estado de Pago:</span>
-              <div className="flex items-center space-x-2">
-                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getPaymentStatusColor(order.payment_status || 'pendiente')}`}>
-                  {order.payment_status || 'pendiente'}
-                </span>
-                <select
-                  value={order.payment_status || 'pendiente'}
-                  onChange={(e) => handlePaymentStatusChange(e.target.value)}
-                  className="text-xs border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  <option value="pendiente">Pendiente</option>
-                  <option value="pagado">Pagado</option>
-                  <option value="cancelado">Cancelado</option>
-                  <option value="reembolsado">Reembolsado</option>
-                </select>
-              </div>
+              <CustomSelect
+                value={order.payment_status || 'pendiente'}
+                onChange={handlePaymentStatusChange}
+                options={[
+                  { value: 'pendiente', label: 'Pendiente' },
+                  { value: 'pagado', label: 'Pagado' },
+                  { value: 'cancelado', label: 'Cancelado' },
+                  { value: 'reembolsado', label: 'Reembolsado' },
+                ]}
+                getColorClass={getPaymentStatusColor}
+                getLabel={getPaymentStatusLabel}
+                className="min-w-[140px]"
+              />
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Repartidor:</span>

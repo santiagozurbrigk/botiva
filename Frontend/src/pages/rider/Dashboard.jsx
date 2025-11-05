@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
+import CustomSelect from '../../components/common/CustomSelect';
 
 export default function RiderDashboard() {
   const { token, user } = useAuth();
@@ -158,32 +159,38 @@ export default function RiderDashboard() {
                 )}
               </div>
 
-              <div className="ml-4 space-y-2">
+              <div className="ml-4 space-y-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Estado del Pedido</label>
-                  <select
+                  <CustomSelect
                     value={order.status}
-                    onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                    className="text-sm border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  >
-                    <option value="pendiente">Pendiente</option>
-                    <option value="en_proceso">En Proceso</option>
-                    <option value="finalizado">Finalizado</option>
-                    <option value="entregado">Entregado</option>
-                  </select>
+                    onChange={(newStatus) => handleStatusChange(order.id, newStatus)}
+                    options={[
+                      { value: 'pendiente', label: 'Pendiente' },
+                      { value: 'en_proceso', label: 'En Proceso' },
+                      { value: 'finalizado', label: 'Finalizado' },
+                      { value: 'entregado', label: 'Entregado' },
+                    ]}
+                    getColorClass={getStatusColor}
+                    getLabel={getStatusLabel}
+                    className="w-full"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Estado de Pago</label>
-                  <select
+                  <CustomSelect
                     value={order.payment_status || 'pendiente'}
-                    onChange={(e) => handlePaymentStatusChange(order.id, e.target.value)}
-                    className="text-sm border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  >
-                    <option value="pendiente">Pendiente</option>
-                    <option value="pagado">Pagado</option>
-                    <option value="cancelado">Cancelado</option>
-                    <option value="reembolsado">Reembolsado</option>
-                  </select>
+                    onChange={(newPaymentStatus) => handlePaymentStatusChange(order.id, newPaymentStatus)}
+                    options={[
+                      { value: 'pendiente', label: 'Pendiente' },
+                      { value: 'pagado', label: 'Pagado' },
+                      { value: 'cancelado', label: 'Cancelado' },
+                      { value: 'reembolsado', label: 'Reembolsado' },
+                    ]}
+                    getColorClass={getPaymentStatusColor}
+                    getLabel={getPaymentStatusLabel}
+                    className="w-full"
+                  />
                 </div>
               </div>
             </div>
