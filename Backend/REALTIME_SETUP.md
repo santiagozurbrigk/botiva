@@ -42,6 +42,8 @@ WHERE pubname = 'supabase_realtime';
 
 3. Deberías ver `orders`, `order_items`, y `order_events` en la lista
 
+**Alternativa:** También puedes hacer clic en el botón "3 tables" junto a `supabase_realtime` en la interfaz de Publications para ver qué tablas están incluidas.
+
 ### 4. Habilitar Realtime en el proyecto (si no está habilitado)
 
 Si Realtime no está habilitado en tu proyecto:
