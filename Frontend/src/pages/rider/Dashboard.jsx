@@ -65,7 +65,7 @@ export default function RiderDashboard() {
     const labels = {
       pendiente: 'Pendiente',
       en_proceso: 'En Proceso',
-      finalizado: 'Finalizado',
+      finalizado: 'Listo para retirar',
       entregado: 'Entregado',
     };
     return labels[status] || status;
@@ -168,7 +168,7 @@ export default function RiderDashboard() {
                     options={[
                       { value: 'pendiente', label: 'Pendiente' },
                       { value: 'en_proceso', label: 'En Proceso' },
-                      { value: 'finalizado', label: 'Finalizado' },
+                      { value: 'finalizado', label: 'Listo para retirar' },
                       { value: 'entregado', label: 'Entregado' },
                     ]}
                     getColorClass={getStatusColor}
