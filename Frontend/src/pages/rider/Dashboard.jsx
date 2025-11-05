@@ -2,20 +2,50 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
 import CustomSelect from '../../components/common/CustomSelect';
+import { useRealtimeOrders } from '../../hooks/useRealtimeOrders';
 
 export default function RiderDashboard() {
   const { token, user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchOrders();
-  }, [token]);
+  // Función para obtener pedidos iniciales (usada por Realtime)
+  const fetchInitialOrders = async () => {
+    try {
+      const data = await api.getOrders(token, { rider_id: user.rider.id });
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      return [];
+    }
+  };
 
+  // Usar hook de Realtime
+  const { orders: realtimeOrders, loading: realtimeLoading, setOrders: setRealtimeOrders } = useRealtimeOrders(
+    token,
+    '',
+    fetchInitialOrders
+  );
+
+  // Sincronizar estado local con Realtime
+  useEffect(() => {
+    if (realtimeOrders.length > 0 || !realtimeLoading) {
+      // Filtrar solo los pedidos asignados a este rider
+      const riderOrders = realtimeOrders.filter(order => 
+        order.assigned_rider_id === user.rider.id
+      );
+      setOrders(riderOrders);
+      setLoading(realtimeLoading);
+    }
+  }, [realtimeOrders, realtimeLoading, user.rider.id]);
+
+  // Mantener fetchOrders para compatibilidad
   const fetchOrders = async () => {
     try {
       const data = await api.getOrders(token, { rider_id: user.rider.id });
-      setOrders(data);
+      const ordersArray = Array.isArray(data) ? data : [];
+      setOrders(ordersArray);
+      setRealtimeOrders(ordersArray);
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
@@ -26,7 +56,7 @@ export default function RiderDashboard() {
   const handleStatusChange = async (orderId, newStatus) => {
     try {
       await api.updateOrderStatus(token, orderId, newStatus);
-      fetchOrders();
+      // No necesitamos llamar fetchOrders() porque Realtime actualizará automáticamente
     } catch (error) {
       console.error('Error updating order:', error);
     }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
 import CustomSelect from '../../components/common/CustomSelect';
+import { useRealtimeOrders } from '../../hooks/useRealtimeOrders';
 
 export default function Orders() {
   const navigate = useNavigate();
@@ -25,12 +26,62 @@ export default function Orders() {
   });
 
   useEffect(() => {
-    fetchOrders();
     fetchRiders();
     fetchDeliveryConfig();
     fetchProducts();
     fetchExtras();
   }, [token, filter]);
+
+  // Función para obtener pedidos iniciales (usada por Realtime)
+  const fetchInitialOrders = async () => {
+    try {
+      const params = filter ? { status: filter } : {};
+      const data = await api.getOrders(token, params);
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      if (error.message && error.message.includes('No autorizado')) {
+        logout();
+        navigate('/login');
+        return [];
+      }
+      return [];
+    }
+  };
+
+  // Usar hook de Realtime
+  const { orders: realtimeOrders, loading: realtimeLoading, setOrders: setRealtimeOrders } = useRealtimeOrders(
+    token,
+    filter,
+    fetchInitialOrders
+  );
+
+  // Sincronizar estado local con Realtime
+  useEffect(() => {
+    if (realtimeOrders.length > 0 || !realtimeLoading) {
+      setOrders(realtimeOrders);
+      setLoading(realtimeLoading);
+    }
+  }, [realtimeOrders, realtimeLoading]);
+
+  // Mantener fetchOrders para compatibilidad y actualizaciones manuales
+  const fetchOrders = async () => {
+    try {
+      const params = filter ? { status: filter } : {};
+      const data = await api.getOrders(token, params);
+      const ordersArray = Array.isArray(data) ? data : [];
+      setOrders(ordersArray);
+      setRealtimeOrders(ordersArray);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      if (error.message && error.message.includes('No autorizado')) {
+        logout();
+        navigate('/login');
+        return;
+      }
+      setOrders([]);
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -111,7 +162,7 @@ export default function Orders() {
   const handleStatusChange = async (orderId, newStatus) => {
     try {
       await api.updateOrder(token, orderId, { status: newStatus });
-      fetchOrders();
+      // No necesitamos llamar fetchOrders() porque Realtime actualizará automáticamente
     } catch (error) {
       console.error('Error updating order:', error);
     }
@@ -120,7 +171,7 @@ export default function Orders() {
   const handleRiderAssign = async (orderId, riderId) => {
     try {
       await api.updateOrder(token, orderId, { assigned_rider_id: riderId });
-      fetchOrders();
+      // No necesitamos llamar fetchOrders() porque Realtime actualizará automáticamente
     } catch (error) {
       console.error('Error assigning rider:', error);
     }
@@ -129,7 +180,7 @@ export default function Orders() {
   const handlePaymentStatusChange = async (orderId, newPaymentStatus) => {
     try {
       await api.updateOrder(token, orderId, { payment_status: newPaymentStatus });
-      fetchOrders();
+      // No necesitamos llamar fetchOrders() porque Realtime actualizará automáticamente
     } catch (error) {
       console.error('Error updating payment status:', error);
     }
@@ -305,7 +356,7 @@ export default function Orders() {
       await api.createOrder(token, orderData);
       setShowCreateModal(false);
       resetForm();
-      fetchOrders();
+      // No necesitamos llamar fetchOrders() porque Realtime agregará el nuevo pedido automáticamente
     } catch (error) {
       console.error('Error creating order:', error);
       alert(error.message || 'Error al crear el pedido');
