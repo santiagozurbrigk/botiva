@@ -6,8 +6,10 @@ export default function RiderLayout({ children }) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    logout();
-    navigate('/login');
+    if (window.confirm('¿Estás seguro que quieres cerrar sesión?')) {
+      logout();
+      navigate('/login');
+    }
   };
 
   return (

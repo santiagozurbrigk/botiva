@@ -32,14 +32,6 @@ export default function RiderDashboard() {
     }
   };
 
-  const handlePaymentStatusChange = async (orderId, newPaymentStatus) => {
-    try {
-      await api.updateOrderPaymentStatus(token, orderId, newPaymentStatus);
-      fetchOrders();
-    } catch (error) {
-      console.error('Error updating payment status:', error);
-    }
-  };
 
   const getStatusColor = (status) => {
     const colors = {
@@ -159,7 +151,7 @@ export default function RiderDashboard() {
                 )}
               </div>
 
-              <div className="ml-4 space-y-3">
+              <div className="ml-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Estado del Pedido</label>
                   <CustomSelect
@@ -173,22 +165,6 @@ export default function RiderDashboard() {
                     ]}
                     getColorClass={getStatusColor}
                     getLabel={getStatusLabel}
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Estado de Pago</label>
-                  <CustomSelect
-                    value={order.payment_status || 'pendiente'}
-                    onChange={(newPaymentStatus) => handlePaymentStatusChange(order.id, newPaymentStatus)}
-                    options={[
-                      { value: 'pendiente', label: 'Pendiente' },
-                      { value: 'pagado', label: 'Pagado' },
-                      { value: 'cancelado', label: 'Cancelado' },
-                      { value: 'reembolsado', label: 'Reembolsado' },
-                    ]}
-                    getColorClass={getPaymentStatusColor}
-                    getLabel={getPaymentStatusLabel}
                     className="w-full"
                   />
                 </div>
