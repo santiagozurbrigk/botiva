@@ -431,6 +431,178 @@ export default function Orders() {
           </table>
         </div>
       </div>
+
+      {/* Modal para crear pedido */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Nuevo Pedido</h3>
+                <button
+                  onClick={() => { setShowCreateModal(false); resetForm(); }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <form onSubmit={handleCreateOrder} className="space-y-4">
+                {/* Información del cliente */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Nombre del Cliente *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.customer_name}
+                      onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Teléfono *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.customer_phone}
+                      onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Dirección</label>
+                  <textarea
+                    value={formData.customer_address}
+                    onChange={(e) => setFormData({ ...formData, customer_address: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    rows="2"
+                  />
+                </div>
+
+                {/* Items del pedido */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-sm font-medium text-gray-700">Productos *</label>
+                    <button
+                      type="button"
+                      onClick={addItem}
+                      className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                    >
+                      + Agregar Producto
+                    </button>
+                  </div>
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {formData.items.length === 0 ? (
+                      <p className="text-sm text-gray-500 text-center py-4">No hay productos agregados</p>
+                    ) : (
+                      formData.items.map((item, index) => (
+                        <div key={index} className="flex items-start space-x-2 p-3 border border-gray-200 rounded-md">
+                          <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-2">
+                            <div className="md:col-span-2">
+                              <select
+                                value={item.product_id || ''}
+                                onChange={(e) => updateItem(index, 'product_id', e.target.value)}
+                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                              >
+                                <option value="">Seleccionar producto...</option>
+                                {products.map((product) => (
+                                  <option key={product.id} value={product.id}>
+                                    {product.name} - ${product.price}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <input
+                                type="number"
+                                min="1"
+                                placeholder="Cantidad"
+                                value={item.quantity}
+                                onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                              />
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="Precio"
+                                value={item.unit_price}
+                                onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
+                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeItem(index)}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Total y método de pago */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Total *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={formData.total_amount}
+                      onChange={(e) => setFormData({ ...formData, total_amount: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Método de Pago</label>
+                    <select
+                      value={formData.payment_method}
+                      onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option value="efectivo">Efectivo</option>
+                      <option value="tarjeta">Tarjeta</option>
+                      <option value="transferencia">Transferencia</option>
+                      <option value="otro">Otro</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Botones */}
+                <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => { setShowCreateModal(false); resetForm(); }}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={formData.items.length === 0}
+                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    Crear Pedido
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
