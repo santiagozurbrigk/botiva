@@ -103,32 +103,6 @@ export default function Orders() {
     }
   };
 
-  const fetchOrders = async () => {
-    try {
-      console.log('Token:', token);
-      console.log('Filter:', filter);
-      
-      // Solo enviar el parámetro status si filter no está vacío
-      const params = filter ? { status: filter } : {};
-      const data = await api.getOrders(token, params);
-      
-      console.log('Orders data:', data);
-      // Asegurarse de que siempre sea un array
-      setOrders(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      // Si es un error 401 (no autorizado), cerrar sesión
-      if (error.message && error.message.includes('No autorizado')) {
-        logout();
-        navigate('/login');
-        return;
-      }
-      setOrders([]); // Establecer array vacío en caso de error
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const fetchRiders = async () => {
     try {
       console.log('Fetching riders with token:', token);
