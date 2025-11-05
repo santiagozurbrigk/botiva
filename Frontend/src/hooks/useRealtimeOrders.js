@@ -47,8 +47,10 @@ export function useRealtimeOrders(token, filter = '', fetchInitialOrders) {
     loadInitialOrders();
 
     // Configurar suscripción a cambios en tiempo real
+    // Usar un nombre de canal único basado en token y filter para evitar conflictos
+    const channelName = `orders-${token?.substring(0, 8) || 'anon'}-${filter || 'all'}`;
     const channel = supabaseClient
-      .channel(`orders-changes-${filter || 'all'}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -64,6 +66,7 @@ export function useRealtimeOrders(token, filter = '', fetchInitialOrders) {
           
           if (payload.eventType === 'INSERT') {
             // Nuevo pedido creado - necesitamos obtener los datos completos
+            // Usar el token en los headers de la query
             try {
               const { data: newOrder, error } = await supabaseClient
                 .from('orders')
