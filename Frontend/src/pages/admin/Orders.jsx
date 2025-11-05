@@ -14,6 +14,7 @@ export default function Orders() {
   const [filter, setFilter] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [products, setProducts] = useState([]);
+  const [extras, setExtras] = useState([]);
   const [formData, setFormData] = useState({
     customer_name: '',
     customer_phone: '',
@@ -28,6 +29,7 @@ export default function Orders() {
     fetchRiders();
     fetchDeliveryConfig();
     fetchProducts();
+    fetchExtras();
   }, [token, filter]);
 
   const fetchProducts = async () => {
@@ -37,6 +39,16 @@ export default function Orders() {
     } catch (error) {
       console.error('Error fetching products:', error);
       setProducts([]);
+    }
+  };
+
+  const fetchExtras = async () => {
+    try {
+      const data = await api.getExtras(token);
+      setExtras(Array.isArray(data) ? data.filter(e => e.active) : []);
+    } catch (error) {
+      console.error('Error fetching extras:', error);
+      setExtras([]);
     }
   };
 
@@ -140,12 +152,16 @@ export default function Orders() {
     const newItems = [...formData.items];
     if (field === 'product_id') {
       const product = products.find(p => p.id === value);
+      const price = product ? (typeof product.price === 'string' ? parseFloat(product.price.replace(',', '.')) : parseFloat(product.price)) : 0;
       newItems[index] = {
         ...newItems[index],
         product_id: value || null,
-        name: product ? product.name : newItems[index].name,
-        unit_price: product ? parseFloat(product.price) : newItems[index].unit_price || 0,
+        name: product ? product.name : '',
+        unit_price: price || 0,
       };
+    } else if (field === 'quantity' || field === 'unit_price') {
+      const numValue = parseFloat(value) || 0;
+      newItems[index] = { ...newItems[index], [field]: numValue };
     } else {
       newItems[index] = { ...newItems[index], [field]: value };
     }
@@ -153,9 +169,42 @@ export default function Orders() {
     calculateTotal(newItems);
   };
 
+  const addExtraToItem = (itemIndex, extraId) => {
+    const newItems = [...formData.items];
+    const extra = extras.find(e => e.id === extraId);
+    if (!extra) return;
+
+    if (!newItems[itemIndex].extras) {
+      newItems[itemIndex].extras = [];
+    }
+
+    const extraPrice = typeof extra.price === 'string' ? parseFloat(extra.price.replace(',', '.')) : parseFloat(extra.price);
+    newItems[itemIndex].extras.push({
+      extra_id: extra.id,
+      name: extra.name,
+      unit_price: extraPrice || 0,
+    });
+
+    setFormData({ ...formData, items: newItems });
+    calculateTotal(newItems);
+  };
+
+  const removeExtraFromItem = (itemIndex, extraIndex) => {
+    const newItems = [...formData.items];
+    if (newItems[itemIndex].extras) {
+      newItems[itemIndex].extras = newItems[itemIndex].extras.filter((_, i) => i !== extraIndex);
+    }
+    setFormData({ ...formData, items: newItems });
+    calculateTotal(newItems);
+  };
+
   const calculateTotal = (items = formData.items) => {
     const total = items.reduce((sum, item) => {
-      return sum + (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+      const itemTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+      const extrasTotal = (item.extras || []).reduce((extraSum, extra) => {
+        return extraSum + (parseFloat(extra.unit_price) || 0);
+      }, 0);
+      return sum + itemTotal + extrasTotal;
     }, 0);
     setFormData({ ...formData, total_amount: total.toFixed(2) });
   };
@@ -172,6 +221,11 @@ export default function Orders() {
         name: item.name || 'Producto sin nombre',
         quantity: parseInt(item.quantity) || 1,
         unit_price: parseFloat(item.unit_price) || 0,
+        extras: (item.extras || []).map(extra => ({
+          extra_id: extra.extra_id || null,
+          name: extra.name || 'Extra sin nombre',
+          unit_price: parseFloat(extra.unit_price) || 0,
+        })),
       }));
 
       const orderData = {
@@ -458,7 +512,7 @@ export default function Orders() {
                       required
                       value={formData.customer_name}
                       onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors"
                     />
                   </div>
                   <div>
@@ -468,7 +522,7 @@ export default function Orders() {
                       required
                       value={formData.customer_phone}
                       onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors"
                     />
                   </div>
                 </div>
@@ -477,7 +531,7 @@ export default function Orders() {
                   <textarea
                     value={formData.customer_address}
                     onChange={(e) => setFormData({ ...formData, customer_address: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors"
                     rows="2"
                   />
                 </div>
@@ -499,13 +553,14 @@ export default function Orders() {
                       <p className="text-sm text-gray-500 text-center py-4">No hay productos agregados</p>
                     ) : (
                       formData.items.map((item, index) => (
-                        <div key={index} className="flex items-start space-x-2 p-3 border border-gray-200 rounded-md">
-                          <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-2">
+                        <div key={index} className="p-4 border-2 border-gray-200 rounded-lg bg-gray-50 space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                             <div className="md:col-span-2">
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Producto</label>
                               <select
                                 value={item.product_id || ''}
                                 onChange={(e) => updateItem(index, 'product_id', e.target.value)}
-                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                className="block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors bg-white"
                               >
                                 <option value="">Seleccionar producto...</option>
                                 {products.map((product) => (
@@ -514,37 +569,85 @@ export default function Orders() {
                                   </option>
                                 ))}
                               </select>
+                              {item.name && (
+                                <p className="mt-1 text-sm font-medium text-gray-900">{item.name}</p>
+                              )}
                             </div>
                             <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Cantidad</label>
                               <input
                                 type="number"
                                 min="1"
-                                placeholder="Cantidad"
-                                value={item.quantity}
+                                value={item.quantity || 1}
                                 onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                className="block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors bg-white"
                               />
                             </div>
-                            <div className="flex items-center space-x-2">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Precio Unit.</label>
                               <input
                                 type="number"
                                 step="0.01"
                                 min="0"
-                                placeholder="Precio"
-                                value={item.unit_price}
+                                value={item.unit_price || 0}
                                 onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
-                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                className="block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors bg-white"
                               />
-                              <button
-                                type="button"
-                                onClick={() => removeItem(index)}
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
                             </div>
+                          </div>
+                          
+                          {/* Extras para este item */}
+                          <div className="border-t border-gray-200 pt-3">
+                            <div className="flex justify-between items-center mb-2">
+                              <label className="block text-xs font-medium text-gray-700">Extras</label>
+                              <select
+                                onChange={(e) => {
+                                  if (e.target.value) {
+                                    addExtraToItem(index, e.target.value);
+                                    e.target.value = '';
+                                  }
+                                }}
+                                className="block px-3 py-1.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 text-xs transition-colors bg-white"
+                              >
+                                <option value="">+ Agregar extra</option>
+                                {extras.map((extra) => (
+                                  <option key={extra.id} value={extra.id}>
+                                    {extra.name} (+${extra.price})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            {item.extras && item.extras.length > 0 && (
+                              <div className="space-y-1">
+                                {item.extras.map((extra, extraIndex) => (
+                                  <div key={extraIndex} className="flex items-center justify-between bg-white px-3 py-2 rounded-md border border-gray-200">
+                                    <span className="text-sm text-gray-700">{extra.name} (+${extra.unit_price})</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeExtraFromItem(index, extraIndex)}
+                                      className="text-red-600 hover:text-red-800"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => removeItem(index)}
+                              className="text-red-600 hover:text-red-800 font-medium text-sm flex items-center"
+                            >
+                              <svg className="w-5 h-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              Eliminar producto
+                            </button>
                           </div>
                         </div>
                       ))
@@ -562,7 +665,7 @@ export default function Orders() {
                       required
                       value={formData.total_amount}
                       onChange={(e) => setFormData({ ...formData, total_amount: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors bg-white"
                     />
                   </div>
                   <div>
@@ -570,7 +673,7 @@ export default function Orders() {
                     <select
                       value={formData.payment_method}
                       onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors bg-white"
                     >
                       <option value="">Seleccionar...</option>
                       <option value="efectivo">Efectivo</option>
