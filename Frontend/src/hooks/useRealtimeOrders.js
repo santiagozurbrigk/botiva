@@ -6,6 +6,12 @@ export function useRealtimeOrders(token, filter = '', fetchInitialOrders) {
   const [loading, setLoading] = useState(true);
   const channelRef = useRef(null);
   const supabaseClientRef = useRef(null);
+  const fetchInitialOrdersRef = useRef(fetchInitialOrders);
+
+  // Actualizar la referencia cuando fetchInitialOrders cambie
+  useEffect(() => {
+    fetchInitialOrdersRef.current = fetchInitialOrders;
+  }, [fetchInitialOrders]);
 
   useEffect(() => {
     if (!token) {
@@ -17,11 +23,17 @@ export function useRealtimeOrders(token, filter = '', fetchInitialOrders) {
     const supabaseClient = getSupabaseClient(token);
     supabaseClientRef.current = supabaseClient;
 
+    // Limpiar canal anterior si existe
+    if (channelRef.current && supabaseClientRef.current) {
+      supabaseClientRef.current.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     // Cargar pedidos iniciales
     const loadInitialOrders = async () => {
       try {
-        if (fetchInitialOrders) {
-          const initialOrders = await fetchInitialOrders();
+        if (fetchInitialOrdersRef.current) {
+          const initialOrders = await fetchInitialOrdersRef.current();
           setOrders(initialOrders || []);
         }
       } catch (error) {
@@ -128,13 +140,14 @@ export function useRealtimeOrders(token, filter = '', fetchInitialOrders) {
 
     channelRef.current = channel;
 
-    // Limpiar suscripción al desmontar
+    // Limpiar suscripción al desmontar o cuando cambien las dependencias
     return () => {
       if (channelRef.current && supabaseClientRef.current) {
         supabaseClientRef.current.removeChannel(channelRef.current);
+        channelRef.current = null;
       }
     };
-  }, [token, filter, fetchInitialOrders]);
+  }, [token, filter]); // Removido fetchInitialOrders de las dependencias para evitar re-renders
 
   return { orders, loading, setOrders };
 }

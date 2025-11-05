@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
@@ -33,7 +33,8 @@ export default function Orders() {
   }, [token, filter]);
 
   // Función para obtener pedidos iniciales (usada por Realtime)
-  const fetchInitialOrders = async () => {
+  // useCallback asegura que la función no cambie en cada render
+  const fetchInitialOrders = useCallback(async () => {
     try {
       const params = filter ? { status: filter } : {};
       const data = await api.getOrders(token, params);
@@ -47,7 +48,7 @@ export default function Orders() {
       }
       return [];
     }
-  };
+  }, [token, filter, logout, navigate]);
 
   // Usar hook de Realtime
   const { orders: realtimeOrders, loading: realtimeLoading, setOrders: setRealtimeOrders } = useRealtimeOrders(

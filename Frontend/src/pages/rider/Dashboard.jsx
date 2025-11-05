@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
 import CustomSelect from '../../components/common/CustomSelect';
@@ -10,7 +10,8 @@ export default function RiderDashboard() {
   const [loading, setLoading] = useState(true);
 
   // Función para obtener pedidos iniciales (usada por Realtime)
-  const fetchInitialOrders = async () => {
+  // useCallback asegura que la función no cambie en cada render
+  const fetchInitialOrders = useCallback(async () => {
     try {
       const data = await api.getOrders(token, { rider_id: user.rider.id });
       return Array.isArray(data) ? data : [];
@@ -18,7 +19,7 @@ export default function RiderDashboard() {
       console.error('Error fetching orders:', error);
       return [];
     }
-  };
+  }, [token, user.rider.id]);
 
   // Usar hook de Realtime
   const { orders: realtimeOrders, loading: realtimeLoading, setOrders: setRealtimeOrders } = useRealtimeOrders(
@@ -27,7 +28,7 @@ export default function RiderDashboard() {
     fetchInitialOrders
   );
 
-  // Sincronizar estado local con Realtime
+  // Sincronizar estado local con Realtime y filtrar por rider
   useEffect(() => {
     if (realtimeOrders.length > 0 || !realtimeLoading) {
       // Filtrar solo los pedidos asignados a este rider
