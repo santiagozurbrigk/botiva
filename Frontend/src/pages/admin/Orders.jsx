@@ -12,12 +12,33 @@ export default function Orders() {
   const [deliveryConfig, setDeliveryConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [formData, setFormData] = useState({
+    customer_name: '',
+    customer_phone: '',
+    customer_address: '',
+    items: [],
+    total_amount: '',
+    payment_method: '',
+  });
 
   useEffect(() => {
     fetchOrders();
     fetchRiders();
     fetchDeliveryConfig();
+    fetchProducts();
   }, [token, filter]);
+
+  const fetchProducts = async () => {
+    try {
+      const data = await api.getProducts(token);
+      setProducts(Array.isArray(data) ? data.filter(p => p.active) : []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      setProducts([]);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -102,6 +123,88 @@ export default function Orders() {
     }
   };
 
+  const addItem = () => {
+    setFormData({
+      ...formData,
+      items: [...formData.items, { product_id: null, name: '', quantity: 1, unit_price: 0 }],
+    });
+  };
+
+  const removeItem = (index) => {
+    const newItems = formData.items.filter((_, i) => i !== index);
+    setFormData({ ...formData, items: newItems });
+    calculateTotal(newItems);
+  };
+
+  const updateItem = (index, field, value) => {
+    const newItems = [...formData.items];
+    if (field === 'product_id') {
+      const product = products.find(p => p.id === value);
+      newItems[index] = {
+        ...newItems[index],
+        product_id: value || null,
+        name: product ? product.name : newItems[index].name,
+        unit_price: product ? parseFloat(product.price) : newItems[index].unit_price || 0,
+      };
+    } else {
+      newItems[index] = { ...newItems[index], [field]: value };
+    }
+    setFormData({ ...formData, items: newItems });
+    calculateTotal(newItems);
+  };
+
+  const calculateTotal = (items = formData.items) => {
+    const total = items.reduce((sum, item) => {
+      return sum + (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+    }, 0);
+    setFormData({ ...formData, total_amount: total.toFixed(2) });
+  };
+
+  const handleCreateOrder = async (e) => {
+    e.preventDefault();
+    try {
+      // Generar external_id único
+      const external_id = `MANUAL-${Date.now()}`;
+      
+      // Preparar items para el backend
+      const items = formData.items.map(item => ({
+        product_id: item.product_id || null,
+        name: item.name || 'Producto sin nombre',
+        quantity: parseInt(item.quantity) || 1,
+        unit_price: parseFloat(item.unit_price) || 0,
+      }));
+
+      const orderData = {
+        external_id,
+        customer_name: formData.customer_name,
+        customer_phone: formData.customer_phone,
+        customer_address: formData.customer_address || null,
+        items,
+        total_amount: parseFloat(formData.total_amount) || 0,
+        payment_method: formData.payment_method || null,
+      };
+
+      await api.createOrder(token, orderData);
+      setShowCreateModal(false);
+      resetForm();
+      fetchOrders();
+    } catch (error) {
+      console.error('Error creating order:', error);
+      alert(error.message || 'Error al crear el pedido');
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      customer_name: '',
+      customer_phone: '',
+      customer_address: '',
+      items: [],
+      total_amount: '',
+      payment_method: '',
+    });
+  };
+
   const getStatusColor = (status) => {
     const colors = {
       pendiente: 'bg-yellow-100 text-yellow-800',
@@ -167,6 +270,12 @@ export default function Orders() {
           <h1 className="text-2xl font-bold text-gray-900">Pedidos</h1>
           <p className="mt-1 text-sm text-gray-600">Gestiona los pedidos del restaurante</p>
         </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+        >
+          + Nuevo Pedido
+        </button>
       </div>
 
       {/* Configuración de entrega actual */}

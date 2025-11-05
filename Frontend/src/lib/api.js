@@ -101,6 +101,22 @@ export const api = {
   },
 
   // Orders
+  createOrder: async (token, orderData) => {
+    const response = await fetch(`${API_URL}/api/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(orderData),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al crear pedido');
+    }
+    return data;
+  },
+
   getOrders: async (token, params = {}) => {
     const queryString = new URLSearchParams(params).toString();
     const url = `${API_URL}/api/orders?${queryString}`;
