@@ -1,15 +1,24 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import ConfirmDialog from '../common/ConfirmDialog';
 
 export default function RiderLayout({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
-  const handleLogout = () => {
-    if (window.confirm('¿Estás seguro que quieres cerrar sesión?')) {
-      logout();
-      navigate('/login');
-    }
+  const handleLogoutClick = () => {
+    setShowLogoutDialog(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutDialog(false);
   };
 
   return (
@@ -31,7 +40,7 @@ export default function RiderLayout({ children }) {
                 <p className="text-xs text-gray-500">{user?.rider?.phone}</p>
               </div>
               <button
-                onClick={handleLogout}
+                onClick={handleLogoutClick}
                 className="p-2 text-gray-400 hover:text-gray-600"
                 title="Cerrar sesión"
               >
@@ -48,6 +57,17 @@ export default function RiderLayout({ children }) {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
+
+      {/* Logout Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showLogoutDialog}
+        onClose={handleLogoutCancel}
+        onConfirm={handleLogoutConfirm}
+        title="Cerrar sesión"
+        message="¿Estás seguro que quieres cerrar sesión?"
+        confirmText="Cerrar sesión"
+        cancelText="Cancelar"
+      />
     </div>
   );
 }
