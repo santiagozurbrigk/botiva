@@ -20,6 +20,15 @@ export const api = {
     return response.json();
   },
 
+  loginWaiter: async (email, password) => {
+    const response = await fetch(`${API_URL}/api/auth/login-waiter`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    return response.json();
+  },
+
   // Products
   getProducts: async (token) => {
     const response = await fetch(`${API_URL}/api/products`, {
@@ -178,6 +187,23 @@ export const api = {
     return response.json();
   },
 
+  // Crear comanda desde panel de mozo
+  createComanda: async (token, comandaData) => {
+    const response = await fetch(`${API_URL}/api/orders/comanda`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(comandaData),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al crear comanda');
+    }
+    return data;
+  },
+
   // Riders
   getRiders: async (token) => {
     const response = await fetch(`${API_URL}/api/riders`, {
@@ -220,6 +246,125 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     });
     return response.json();
+  },
+
+  // Waiters
+  getWaiters: async (token) => {
+    const response = await fetch(`${API_URL}/api/waiters`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al obtener mozos');
+    }
+    return Array.isArray(data) ? data : [];
+  },
+
+  createWaiter: async (token, waiter) => {
+    const response = await fetch(`${API_URL}/api/waiters`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(waiter),
+    });
+    return response.json();
+  },
+
+  updateWaiter: async (token, id, waiter) => {
+    const response = await fetch(`${API_URL}/api/waiters/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(waiter),
+    });
+    return response.json();
+  },
+
+  deleteWaiter: async (token, id) => {
+    const response = await fetch(`${API_URL}/api/waiters/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.json();
+  },
+
+  // Waiter Tables
+  getWaiterTables: async (token, waiterId = null) => {
+    const url = waiterId 
+      ? `${API_URL}/api/waiter-tables?waiter_id=${waiterId}`
+      : `${API_URL}/api/waiter-tables`;
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al obtener mesas');
+    }
+    return Array.isArray(data) ? data : [];
+  },
+
+  getMyTables: async (token) => {
+    const response = await fetch(`${API_URL}/api/waiter-tables/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al obtener mis mesas');
+    }
+    return Array.isArray(data) ? data : [];
+  },
+
+  assignTablesToWaiter: async (token, waiterId, tableNumbers) => {
+    const response = await fetch(`${API_URL}/api/waiter-tables`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ waiter_id: waiterId, table_numbers: tableNumbers }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al asignar mesas');
+    }
+    return data;
+  },
+
+  deleteWaiterTable: async (token, id) => {
+    const response = await fetch(`${API_URL}/api/waiter-tables/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.json();
+  },
+
+  // Kitchen
+  getKitchenOrders: async () => {
+    const response = await fetch(`${API_URL}/api/kitchen/orders`);
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al obtener pedidos de cocina');
+    }
+    return Array.isArray(data) ? data : [];
+  },
+
+  updateKitchenOrderStatus: async (id, status) => {
+    const response = await fetch(`${API_URL}/api/kitchen/orders/${id}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al actualizar estado');
+    }
+    return data;
   },
 
   // Finances

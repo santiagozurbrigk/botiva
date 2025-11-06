@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateAdmin, authenticateRider } from '../middleware/auth.js';
+import { authenticateAdmin, authenticateRider, authenticateWaiter } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -77,6 +77,47 @@ router.post('/login-rider', async (req, res) => {
         email: data.user.email,
         role: 'rider',
         rider,
+      },
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Error al iniciar sesión' });
+  }
+});
+
+// Login Waiter
+router.post('/login-waiter', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const { supabaseAdmin } = req.app.locals;
+
+    const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+
+    // Verificar que es waiter
+    const { data: waiter, error: waiterError } = await supabaseAdmin
+      .from('waiters')
+      .select('*')
+      .eq('auth_user_id', data.user.id)
+      .single();
+
+    if (waiterError || !waiter) {
+      return res.status(403).json({ error: 'No tienes permisos de mozo' });
+    }
+
+    res.json({
+      token: data.session.access_token,
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        role: 'waiter',
+        waiter,
       },
     });
   } catch (error) {

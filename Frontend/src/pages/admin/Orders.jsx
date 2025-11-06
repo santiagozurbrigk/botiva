@@ -23,6 +23,7 @@ export default function Orders() {
     items: [],
     total_amount: '',
     payment_method: '',
+    scheduled_delivery_time: '',
   });
 
   useEffect(() => {
@@ -322,6 +323,7 @@ export default function Orders() {
         items,
         total_amount: parseFloat(formData.total_amount) || 0,
         payment_method: formData.payment_method || null,
+        scheduled_delivery_time: formData.scheduled_delivery_time || null,
       };
 
       await api.createOrder(token, orderData);
@@ -342,6 +344,7 @@ export default function Orders() {
       items: [],
       total_amount: '',
       payment_method: '',
+      scheduled_delivery_time: '',
     });
   };
 
@@ -620,6 +623,16 @@ export default function Orders() {
                     className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors"
                     rows="2"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Horario Específico (Opcional)</label>
+                  <input
+                    type="datetime-local"
+                    value={formData.scheduled_delivery_time}
+                    onChange={(e) => setFormData({ ...formData, scheduled_delivery_time: e.target.value })}
+                    className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors bg-white"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Si el cliente quiere el pedido para un horario específico</p>
                 </div>
 
                 {/* Items del pedido */}

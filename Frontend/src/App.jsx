@@ -3,14 +3,18 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
 import AdminLayout from './components/admin/AdminLayout';
 import RiderLayout from './components/rider/RiderLayout';
+import WaiterLayout from './components/waiter/WaiterLayout';
 import Dashboard from './pages/admin/Dashboard';
 import Products from './pages/admin/Products';
 import Extras from './pages/admin/Extras';
 import Orders from './pages/admin/Orders';
 import OrderDetail from './pages/admin/OrderDetail';
 import Riders from './pages/admin/Riders';
+import Waiters from './pages/admin/Waiters';
 import DeliveryConfig from './pages/admin/DeliveryConfig';
 import RiderDashboard from './pages/rider/Dashboard';
+import WaiterDashboard from './pages/waiter/Dashboard';
+import Kitchen from './pages/kitchen/Kitchen';
 
 function PrivateRoute({ children, requiredRole }) {
   const { user, loading } = useAuth();
@@ -51,6 +55,7 @@ function AppRoutes() {
                 <Route path="products" element={<Products />} />
                 <Route path="extras" element={<Extras />} />
                 <Route path="riders" element={<Riders />} />
+                <Route path="waiters" element={<Waiters />} />
                 <Route path="delivery-config" element={<DeliveryConfig />} />
               </Routes>
             </AdminLayout>
@@ -70,6 +75,22 @@ function AppRoutes() {
           </PrivateRoute>
         }
       />
+
+      <Route
+        path="/waiter/*"
+        element={
+          <PrivateRoute requiredRole="waiter">
+            <WaiterLayout>
+              <Routes>
+                <Route index element={<WaiterDashboard />} />
+              </Routes>
+            </WaiterLayout>
+          </PrivateRoute>
+        }
+      />
+
+      {/* Panel de Cocina - Sin autenticación (público) */}
+      <Route path="/kitchen" element={<Kitchen />} />
 
       <Route path="/" element={<Navigate to="/login" replace />} />
     </Routes>

@@ -1,43 +1,76 @@
 import express from 'express';
-import { authenticateAdmin, authenticateRider } from '../middleware/auth.js';
+import { authenticateAdmin, authenticateRider, authenticateWaiter } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// POST /api/orders - Crear pedido (llamado por n8n)
+// POST /api/orders - Crear pedido (llamado por n8n o desde panel de mozo)
 router.post('/', async (req, res) => {
   try {
-    const { external_id, customer_name, customer_phone, customer_address, items, total_amount, payment_method } = req.body;
+    const { 
+      external_id, 
+      customer_name, 
+      customer_phone, 
+      customer_address, 
+      items, 
+      total_amount, 
+      payment_method,
+      order_type,
+      waiter_id,
+      table_number,
+      scheduled_delivery_time
+    } = req.body;
 
     // Validación básica
-    if (!external_id || !customer_name || !customer_phone || !items || !total_amount) {
+    if (!customer_name || !customer_phone || !items || !total_amount) {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
+    }
+
+    // Si es pedido de delivery (n8n), external_id es requerido
+    if ((!order_type || order_type === 'delivery') && !external_id) {
+      return res.status(400).json({ error: 'external_id es requerido para pedidos de delivery' });
     }
 
     const { supabaseAdmin } = req.app.locals;
 
-    // Verificar si el pedido ya existe (por external_id)
-    const { data: existingOrder } = await supabaseAdmin
-      .from('orders')
-      .select('id')
-      .eq('external_id', external_id)
-      .single();
+    // Verificar si el pedido ya existe (por external_id, solo para delivery)
+    if (external_id) {
+      const { data: existingOrder } = await supabaseAdmin
+        .from('orders')
+        .select('id')
+        .eq('external_id', external_id)
+        .single();
 
-    if (existingOrder) {
-      return res.status(409).json({ error: 'El pedido ya existe' });
+      if (existingOrder) {
+        return res.status(409).json({ error: 'El pedido ya existe' });
+      }
     }
 
+    // Generar external_id si no existe (para comandas)
+    const finalExternalId = external_id || `COM-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Determinar order_type por defecto
+    const finalOrderType = order_type || 'delivery';
+
     // Crear el pedido
+    const orderData = {
+      external_id: finalExternalId,
+      customer_name,
+      customer_phone,
+      customer_address: customer_address || null,
+      total_amount,
+      payment_method: payment_method || null,
+      status: 'pendiente',
+      order_type: finalOrderType,
+    };
+
+    // Agregar campos opcionales si existen
+    if (waiter_id) orderData.waiter_id = waiter_id;
+    if (table_number) orderData.table_number = parseInt(table_number);
+    if (scheduled_delivery_time) orderData.scheduled_delivery_time = scheduled_delivery_time;
+
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
-      .insert({
-        external_id,
-        customer_name,
-        customer_phone,
-        customer_address,
-        total_amount,
-        payment_method,
-        status: 'pendiente',
-      })
+      .insert(orderData)
       .select()
       .single();
 
@@ -85,6 +118,7 @@ router.get('/', async (req, res) => {
       .select(`
         *,
         rider:riders(id, name, phone),
+        waiter:waiters(id, name),
         order_items(*)
       `)
       .order('created_at', { ascending: false });
@@ -133,6 +167,7 @@ router.get('/:id', async (req, res) => {
       .select(`
         *,
         rider:riders(id, name, phone),
+        waiter:waiters(id, name),
         order_items(*),
         events:order_events(*)
       `)
@@ -196,6 +231,7 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
       .select(`
         *,
         rider:riders(id, name, phone),
+        waiter:waiters(id, name),
         order_items(*)
       `)
       .single();
@@ -357,6 +393,99 @@ router.patch('/:id/payment-status', authenticateRider, async (req, res) => {
   } catch (error) {
     console.error('Error updating payment status:', error);
     res.status(500).json({ error: 'Error al actualizar estado de pago' });
+  }
+});
+
+// POST /api/orders/comanda - Crear comanda desde panel de mozo
+router.post('/comanda', authenticateWaiter, async (req, res) => {
+  try {
+    const { 
+      customer_name, 
+      customer_phone, 
+      items, 
+      total_amount, 
+      payment_method,
+      table_number,
+      scheduled_delivery_time
+    } = req.body;
+
+    // Validación
+    if (!customer_name || !customer_phone || !items || !total_amount || !table_number) {
+      return res.status(400).json({ error: 'Faltan campos requeridos' });
+    }
+
+    const { supabaseAdmin } = req.app.locals;
+    const waiterId = req.user.waiter.id;
+
+    // Generar external_id único
+    const externalId = `COM-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Crear la comanda
+    const orderData = {
+      external_id: externalId,
+      customer_name,
+      customer_phone,
+      total_amount,
+      payment_method: payment_method || null,
+      status: 'pendiente',
+      order_type: 'dine_in',
+      waiter_id: waiterId,
+      table_number: parseInt(table_number),
+    };
+
+    if (scheduled_delivery_time) {
+      orderData.scheduled_delivery_time = scheduled_delivery_time;
+    }
+
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from('orders')
+      .insert(orderData)
+      .select()
+      .single();
+
+    if (orderError) throw orderError;
+
+    // Crear los items de la comanda
+    const orderItems = items.map(item => ({
+      order_id: order.id,
+      product_id: item.product_id || null,
+      product_name: item.name,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+    }));
+
+    const { error: itemsError } = await supabaseAdmin
+      .from('order_items')
+      .insert(orderItems);
+
+    if (itemsError) throw itemsError;
+
+    // Registrar evento
+    await supabaseAdmin
+      .from('order_events')
+      .insert({
+        order_id: order.id,
+        event_type: 'created',
+        description: `Comanda creada por mozo - Mesa ${table_number}`,
+      });
+
+    // Obtener el pedido completo con relaciones
+    const { data: fullOrder, error: fetchError } = await supabaseAdmin
+      .from('orders')
+      .select(`
+        *,
+        waiter:waiters(id, name),
+        order_items(*)
+      `)
+      .eq('id', order.id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    res.status(201).json(fullOrder);
+  } catch (error) {
+    console.error('Error creating comanda:', error);
+    res.status(500).json({ error: 'Error al crear comanda' });
   }
 });
 

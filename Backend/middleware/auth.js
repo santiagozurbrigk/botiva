@@ -83,3 +83,39 @@ export const authenticateRider = async (req, res, next) => {
   }
 };
 
+export const authenticateWaiter = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No autorizado' });
+    }
+
+    const token = authHeader.substring(7);
+    const { supabaseAdmin } = req.app.locals;
+
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+    if (error || !user) {
+      return res.status(401).json({ error: 'Token inválido' });
+    }
+
+    // Verificar si es waiter
+    const { data: waiter, error: waiterError } = await supabaseAdmin
+      .from('waiters')
+      .select('*')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    if (waiterError || !waiter) {
+      return res.status(403).json({ error: 'Acceso denegado' });
+    }
+
+    req.user = { ...user, waiter };
+    next();
+  } catch (error) {
+    console.error('Auth error:', error);
+    res.status(500).json({ error: 'Error de autenticación' });
+  }
+};
+

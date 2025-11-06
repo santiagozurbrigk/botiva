@@ -6,7 +6,7 @@ import { api } from '../lib/api';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [userType, setUserType] = useState('admin'); // admin o rider
+  const [userType, setUserType] = useState('admin'); // admin, rider o waiter
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -19,8 +19,19 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const loginFn = userType === 'admin' ? api.loginAdmin : api.loginRider;
-      const redirectPath = userType === 'admin' ? '/admin' : '/rider';
+      let loginFn;
+      let redirectPath;
+      
+      if (userType === 'admin') {
+        loginFn = api.loginAdmin;
+        redirectPath = '/admin';
+      } else if (userType === 'rider') {
+        loginFn = api.loginRider;
+        redirectPath = '/rider';
+      } else if (userType === 'waiter') {
+        loginFn = api.loginWaiter;
+        redirectPath = '/waiter';
+      }
       
       const data = await loginFn(email, password);
       
@@ -63,6 +74,7 @@ export default function Login() {
               >
                 <option value="admin">Administrador</option>
                 <option value="rider">Repartidor</option>
+                <option value="waiter">Mozo</option>
               </select>
             </div>
             <div>
