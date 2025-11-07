@@ -12,9 +12,11 @@ import OrderDetail from './pages/admin/OrderDetail';
 import Riders from './pages/admin/Riders';
 import Waiters from './pages/admin/Waiters';
 import DeliveryConfig from './pages/admin/DeliveryConfig';
+import Stock from './pages/admin/Stock';
 import RiderDashboard from './pages/rider/Dashboard';
 import WaiterDashboard from './pages/waiter/Dashboard';
 import Kitchen from './pages/kitchen/Kitchen';
+import StockRequest from './pages/stock/StockRequest';
 
 function PrivateRoute({ children, requiredRole }) {
   const { user, loading } = useAuth();
@@ -57,6 +59,7 @@ function AppRoutes() {
                 <Route path="riders" element={<Riders />} />
                 <Route path="waiters" element={<Waiters />} />
                 <Route path="delivery-config" element={<DeliveryConfig />} />
+                <Route path="stock" element={<Stock />} />
               </Routes>
             </AdminLayout>
           </PrivateRoute>
@@ -91,6 +94,7 @@ function AppRoutes() {
 
       {/* Panel de Cocina - Sin autenticación (público) */}
       <Route path="/kitchen" element={<Kitchen />} />
+      <Route path="/stock" element={<StockRequest />} />
 
       <Route path="/" element={<Navigate to="/login" replace />} />
     </Routes>

@@ -367,6 +367,50 @@ export const api = {
     return data;
   },
 
+  // Stock
+  createStockRequest: async (payload) => {
+    const response = await fetch(`${API_URL}/api/stock/requests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al enviar el pedido de stock');
+    }
+    return data;
+  },
+
+  getStockRequests: async (token, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    const url = query ? `${API_URL}/api/stock/requests?${query}` : `${API_URL}/api/stock/requests`;
+
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al obtener pedidos de stock');
+    }
+    return Array.isArray(data) ? data : [];
+  },
+
+  updateStockRequestStatus: async (token, id, status) => {
+    const response = await fetch(`${API_URL}/api/stock/requests/${id}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al actualizar el estado del stock');
+    }
+    return data;
+  },
+
   // Finances
   getFinanceSummary: async (token, params = {}) => {
     const queryString = new URLSearchParams(params).toString();

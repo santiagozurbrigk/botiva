@@ -9,6 +9,7 @@ import ridersRoutes from './routes/riders.js';
 import waitersRoutes from './routes/waiters.js';
 import waiterTablesRoutes from './routes/waiter-tables.js';
 import kitchenRoutes from './routes/kitchen.js';
+import stockRoutes from './routes/stock.js';
 import authRoutes from './routes/auth.js';
 import financesRoutes from './routes/finances.js';
 import deliveryConfigRoutes from './routes/delivery-config.js';
@@ -112,6 +113,7 @@ app.use('/api/waiter-tables', waiterTablesRoutes);
 app.use('/api/kitchen', kitchenRoutes);
 app.use('/api/finances', financesRoutes);
 app.use('/api/delivery-config', deliveryConfigRoutes);
+app.use('/api/stock', stockRoutes);
 console.log('✅ Rutas configuradas');
 
 // Health check
