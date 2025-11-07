@@ -66,7 +66,13 @@ router.post('/', async (req, res) => {
     // Agregar campos opcionales si existen
     if (waiter_id) orderData.waiter_id = waiter_id;
     if (table_number) orderData.table_number = parseInt(table_number);
-    if (scheduled_delivery_time) orderData.scheduled_delivery_time = scheduled_delivery_time;
+    const cleanScheduledTime = typeof scheduled_delivery_time === 'string'
+      ? scheduled_delivery_time.trim()
+      : scheduled_delivery_time;
+
+    if (cleanScheduledTime) {
+      orderData.scheduled_delivery_time = cleanScheduledTime;
+    }
 
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
@@ -433,8 +439,12 @@ router.post('/comanda', authenticateWaiter, async (req, res) => {
       table_number: parseInt(table_number),
     };
 
-    if (scheduled_delivery_time) {
-      orderData.scheduled_delivery_time = scheduled_delivery_time;
+    const cleanScheduledTime = typeof scheduled_delivery_time === 'string'
+      ? scheduled_delivery_time.trim()
+      : scheduled_delivery_time;
+
+    if (cleanScheduledTime) {
+      orderData.scheduled_delivery_time = cleanScheduledTime;
     }
 
     const { data: order, error: orderError } = await supabaseAdmin

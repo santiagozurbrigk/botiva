@@ -27,7 +27,7 @@ export default function AdminLayout({ children }) {
       <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg">
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-center h-16 px-4 border-b border-gray-200">
-            <h1 className="text-xl font-bold text-gray-900">Panel de administración</h1>
+            <h1 className="text-xl font-bold py-5 text-gray-900">Panel de administración</h1>
           </div>
           
           <nav className="flex-1 px-4 py-6 space-y-2">
