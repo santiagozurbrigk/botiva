@@ -440,7 +440,8 @@ export default function WaiterDashboard() {
                     Crear Comanda
                   </button>
                 </div>
-              </form>
+                </form>
+              )}
             </div>
           </div>
         </div>
