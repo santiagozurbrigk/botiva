@@ -410,7 +410,7 @@ router.post('/comanda', authenticateWaiter, async (req, res) => {
     } = req.body;
 
     // Validación
-    if (!customer_name || !customer_phone || !items || !total_amount || !table_number) {
+    if (!items || !total_amount || !table_number) {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
 
@@ -423,10 +423,10 @@ router.post('/comanda', authenticateWaiter, async (req, res) => {
     // Crear la comanda
     const orderData = {
       external_id: externalId,
-      customer_name,
-      customer_phone,
+      customer_name: customer_name || 'Cliente de mesa',
+      customer_phone: customer_phone || '',
       total_amount,
-      payment_method: payment_method || null,
+      payment_method: payment_method || 'no_definido',
       status: 'pendiente',
       order_type: 'dine_in',
       waiter_id: waiterId,
@@ -453,6 +453,11 @@ router.post('/comanda', authenticateWaiter, async (req, res) => {
       quantity: item.quantity,
       unit_price: item.unit_price,
     }));
+
+    // Si hay extras, agregarlos a los items
+    // Nota: Los extras se guardan como items adicionales o en una tabla separada
+    // Por ahora, los extras están dentro del item, pero no se guardan en order_items
+    // Si necesitas guardarlos, puedes crear items adicionales para los extras
 
     const { error: itemsError } = await supabaseAdmin
       .from('order_items')

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
+import MenuView from '../../components/waiter/MenuView';
 
 export default function WaiterDashboard() {
   const { token, user } = useAuth();
@@ -9,12 +10,11 @@ export default function WaiterDashboard() {
   const [extras, setExtras] = useState([]);
   const [selectedTable, setSelectedTable] = useState(null);
   const [showComandaModal, setShowComandaModal] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [formData, setFormData] = useState({
-    customer_name: '',
-    customer_phone: '',
     items: [],
     total_amount: '0.00',
-    payment_method: 'efectivo',
+    payment_method: 'no_definido',
     scheduled_delivery_time: '',
   });
   const [loading, setLoading] = useState(true);
@@ -60,22 +60,13 @@ export default function WaiterDashboard() {
   const handleTableClick = (tableNumber) => {
     setSelectedTable(tableNumber);
     setFormData({
-      customer_name: '',
-      customer_phone: '',
       items: [],
       total_amount: '0.00',
-      payment_method: 'efectivo',
+      payment_method: 'no_definido',
       scheduled_delivery_time: '',
     });
+    setShowMenu(false);
     setShowComandaModal(true);
-  };
-
-  const addItem = () => {
-    setFormData(prev => ({
-      ...prev,
-      items: [...prev.items, { product_id: null, name: '', quantity: 1, unit_price: 0, extras: [] }],
-    }));
-    calculateTotal();
   };
 
   const removeItem = (index) => {
@@ -164,10 +155,28 @@ export default function WaiterDashboard() {
     }, 0);
   };
 
+  const handleAddProductFromMenu = (productData) => {
+    setFormData(prev => {
+      const newItems = [...prev.items, productData];
+      const total = newItems.reduce((sum, item) => {
+        const itemTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+        const extrasTotal = (item.extras || []).reduce((extraSum, extra) => {
+          return extraSum + (parseFloat(extra.unit_price) || 0);
+        }, 0);
+        return sum + itemTotal + extrasTotal;
+      }, 0);
+      return {
+        ...prev,
+        items: newItems,
+        total_amount: total.toFixed(2),
+      };
+    });
+  };
+
   const handleCreateComanda = async (e) => {
     e.preventDefault();
-    if (!formData.customer_name || !formData.customer_phone || formData.items.length === 0) {
-      alert('Por favor completa todos los campos requeridos');
+    if (formData.items.length === 0) {
+      alert('Por favor agrega al menos un producto a la comanda');
       return;
     }
 
@@ -177,14 +186,15 @@ export default function WaiterDashboard() {
         name: item.name || 'Producto sin nombre',
         quantity: parseInt(item.quantity) || 1,
         unit_price: parseFloat(item.unit_price) || 0,
+        extras: item.extras || [],
       }));
 
       const comandaData = {
-        customer_name: formData.customer_name,
-        customer_phone: formData.customer_phone,
+        customer_name: 'Cliente de mesa', // Nombre por defecto para comandas
+        customer_phone: '', // No requerido para comandas
         items,
         total_amount: parseFloat(formData.total_amount) || 0,
-        payment_method: formData.payment_method || 'efectivo',
+        payment_method: formData.payment_method || 'no_definido',
         table_number: selectedTable,
         scheduled_delivery_time: formData.scheduled_delivery_time || null,
       };
@@ -192,13 +202,12 @@ export default function WaiterDashboard() {
       await api.createComanda(token, comandaData);
       alert('Comanda creada exitosamente');
       setShowComandaModal(false);
+      setShowMenu(false);
       setSelectedTable(null);
       setFormData({
-        customer_name: '',
-        customer_phone: '',
         items: [],
         total_amount: '0.00',
-        payment_method: 'efectivo',
+        payment_method: 'no_definido',
         scheduled_delivery_time: '',
       });
     } catch (error) {
@@ -249,6 +258,7 @@ export default function WaiterDashboard() {
                 <button
                   onClick={() => {
                     setShowComandaModal(false);
+                    setShowMenu(false);
                     setSelectedTable(null);
                   }}
                   className="text-gray-400 hover:text-gray-600"
@@ -259,170 +269,164 @@ export default function WaiterDashboard() {
                 </button>
               </div>
 
-              <form onSubmit={handleCreateComanda} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              {showMenu ? (
+                <div className="mt-4">
+                  <MenuView
+                    products={products}
+                    extras={extras}
+                    onAddProduct={handleAddProductFromMenu}
+                    onBack={() => setShowMenu(false)}
+                  />
+                </div>
+              ) : (
+                <form onSubmit={handleCreateComanda} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Nombre del Cliente</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Horario Específico (Opcional)</label>
                     <input
                       type="text"
-                      required
-                      value={formData.customer_name}
-                      onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+                      value={formData.scheduled_delivery_time}
+                      onChange={(e) => setFormData({ ...formData, scheduled_delivery_time: e.target.value })}
                       className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors bg-white"
-                      placeholder="Ej: Juan Pérez"
+                      placeholder="Ej: Para las 20:00, En 30 minutos, etc."
                     />
+                    <p className="mt-1 text-xs text-gray-500">Escribe el horario específico si el cliente lo solicita</p>
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Teléfono</label>
-                    <input
-                      type="tel"
-                      required
-                      value={formData.customer_phone}
-                      onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
-                      className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors bg-white"
-                      placeholder="Ej: 099123456"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Horario Específico (Opcional)</label>
-                  <input
-                    type="datetime-local"
-                    value={formData.scheduled_delivery_time}
-                    onChange={(e) => setFormData({ ...formData, scheduled_delivery_time: e.target.value })}
-                    className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors bg-white"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">Si el cliente quiere la comida para un horario específico</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Productos</label>
-                  {formData.items.map((item, index) => (
-                    <div key={index} className="mb-4 p-4 border border-gray-200 rounded-lg">
-                      <div className="grid grid-cols-3 gap-4 mb-2">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700">Producto</label>
-                          <select
-                            value={item.product_id || ''}
-                            onChange={(e) => updateItem(index, 'product_id', e.target.value)}
-                            className="mt-1 block w-full px-3 py-2 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm bg-white"
-                            required
-                          >
-                            <option value="">Seleccionar...</option>
-                            {products.map(product => (
-                              <option key={product.id} value={product.id}>{product.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700">Cantidad</label>
-                          <input
-                            type="number"
-                            min="1"
-                            value={item.quantity}
-                            onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                            className="mt-1 block w-full px-3 py-2 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm bg-white"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700">Precio Unit.</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={item.unit_price}
-                            onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
-                            className="mt-1 block w-full px-3 py-2 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm bg-white"
-                            required
-                          />
-                        </div>
-                      </div>
-                      {item.product_id && (
-                        <div className="mb-2 p-2 bg-blue-50 rounded">
-                          <p className="text-sm font-medium text-blue-900">{item.name}</p>
-                          <p className="text-xs text-blue-700">Precio: ${item.unit_price}</p>
-                        </div>
-                      )}
-                      <div className="flex justify-between items-center">
-                        <div className="flex-1">
-                          <label className="block text-xs font-medium text-gray-700 mb-1">Extras</label>
-                          <select
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                addExtraToItem(index, e.target.value);
-                                e.target.value = '';
-                              }
-                            }}
-                            className="block w-full px-3 py-2 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm bg-white"
-                          >
-                            <option value="">Agregar extra...</option>
-                            {extras.map(extra => (
-                              <option key={extra.id} value={extra.id}>{extra.name} (+${extra.price})</option>
-                            ))}
-                          </select>
-                          {item.extras && item.extras.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {item.extras.map((extra, extraIndex) => (
-                                <span key={extraIndex} className="inline-flex items-center px-2 py-1 rounded text-xs bg-indigo-100 text-indigo-800">
-                                  {extra.name}
-                                  <button
-                                    type="button"
-                                    onClick={() => removeExtraFromItem(index, extraIndex)}
-                                    className="ml-1 text-indigo-600 hover:text-indigo-900"
-                                  >
-                                    ×
-                                  </button>
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-medium text-gray-700">Productos</label>
+                      <button
+                        type="button"
+                        onClick={() => setShowMenu(true)}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-medium"
+                      >
+                        📋 Ver Menú
+                      </button>
+                    </div>
+                    {formData.items.length === 0 ? (
+                      <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                        <p className="text-gray-500 mb-2">No hay productos agregados</p>
                         <button
                           type="button"
-                          onClick={() => removeItem(index)}
-                          className="ml-4 px-3 py-2 text-red-600 hover:text-red-900"
+                          onClick={() => setShowMenu(true)}
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-medium"
                         >
-                          Eliminar
+                          Agregar desde el menú
                         </button>
                       </div>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={addItem}
-                    className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-indigo-500 hover:text-indigo-600"
-                  >
-                    + Agregar Producto
-                  </button>
-                </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {formData.items.map((item, index) => (
+                          <div key={index} className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-gray-900">{item.quantity}x</span>
+                                  <span className="text-gray-700">{item.name}</span>
+                                  <span className="text-sm text-gray-500">
+                                    (${parseFloat(item.unit_price || 0).toFixed(2)} c/u)
+                                  </span>
+                                </div>
+                                {item.extras && item.extras.length > 0 && (
+                                  <div className="mt-1 flex flex-wrap gap-1">
+                                    {item.extras.map((extra, extraIndex) => (
+                                      <span key={extraIndex} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-indigo-100 text-indigo-800">
+                                        +{extra.name}
+                                        <button
+                                          type="button"
+                                          onClick={() => removeExtraFromItem(index, extraIndex)}
+                                          className="ml-1 text-indigo-600 hover:text-indigo-900"
+                                        >
+                                          ×
+                                        </button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                                <div className="mt-2">
+                                  <select
+                                    onChange={(e) => {
+                                      if (e.target.value) {
+                                        addExtraToItem(index, e.target.value);
+                                        e.target.value = '';
+                                      }
+                                    }}
+                                    className="block w-full px-2 py-1 text-xs rounded border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white"
+                                  >
+                                    <option value="">Agregar extra...</option>
+                                    {extras.map(extra => (
+                                      <option key={extra.id} value={extra.id}>
+                                        {extra.name} (+${parseFloat(extra.price || 0).toFixed(2)})
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 ml-4">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newQuantity = Math.max(1, (item.quantity || 1) - 1);
+                                    updateItem(index, 'quantity', newQuantity);
+                                  }}
+                                  className="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded flex items-center justify-center text-gray-700 font-bold"
+                                >
+                                  −
+                                </button>
+                                <span className="w-8 text-center font-medium">{item.quantity}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newQuantity = (item.quantity || 1) + 1;
+                                    updateItem(index, 'quantity', newQuantity);
+                                  }}
+                                  className="w-6 h-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded flex items-center justify-center font-bold"
+                                >
+                                  +
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeItem(index)}
+                                  className="ml-2 px-2 py-1 text-red-600 hover:text-red-900 text-sm"
+                                >
+                                  Eliminar
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Método de Pago</label>
-                    <select
-                      value={formData.payment_method}
-                      onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
-                      className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm bg-white"
-                    >
-                      <option value="efectivo">Efectivo</option>
-                      <option value="tarjeta">Tarjeta</option>
-                      <option value="transferencia">Transferencia</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Total</label>
-                    <div className="mt-1 px-4 py-2.5 bg-gray-100 rounded-lg text-lg font-bold text-gray-900">
-                      ${formData.total_amount}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Método de Pago</label>
+                      <select
+                        value={formData.payment_method}
+                        onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+                        className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm bg-white"
+                      >
+                        <option value="no_definido">No definido</option>
+                        <option value="efectivo">Efectivo</option>
+                        <option value="tarjeta">Tarjeta</option>
+                        <option value="transferencia">Transferencia</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Total</label>
+                      <div className="mt-1 px-4 py-2.5 bg-gray-100 rounded-lg text-lg font-bold text-gray-900">
+                        ${formData.total_amount}
+                      </div>
                     </div>
                   </div>
-                </div>
 
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
                     type="button"
                     onClick={() => {
                       setShowComandaModal(false);
+                      setShowMenu(false);
                       setSelectedTable(null);
                     }}
                     className="px-6 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
