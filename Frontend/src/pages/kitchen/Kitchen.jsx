@@ -103,7 +103,7 @@ export default function Kitchen() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full mx-auto">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Panel de Cocina</h1>
           <p className="mt-1 text-sm text-gray-600">
@@ -116,9 +116,9 @@ export default function Kitchen() {
             <p className="text-gray-500 text-lg">No hay comandas pendientes</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="space-y-3">
             {orders.map((order) => (
-              <div key={order.id} className="relative">
+              <div key={order.id} className="relative w-full">
                 <SwipeableOrderCard
                   order={order}
                   onSwipeRight={() => handleMarkReady(order.id)}

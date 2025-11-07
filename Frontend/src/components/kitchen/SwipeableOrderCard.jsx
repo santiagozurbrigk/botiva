@@ -131,10 +131,10 @@ export default function SwipeableOrderCard({ order, onSwipeRight, onSwipeLeft, f
   const opacity = isDragging ? 1 - Math.abs(translateX) / 300 : 1;
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
       <div
         ref={cardRef}
-        className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-yellow-500 transition-all duration-200 relative cursor-grab active:cursor-grabbing"
+        className="bg-white rounded-lg shadow-md p-4 lg:p-5 border-l-4 border-yellow-500 transition-all duration-200 relative cursor-grab active:cursor-grabbing w-full"
         style={{
           transform: `translateX(${translateX}px)`,
           opacity: Math.max(0.3, opacity),
@@ -163,78 +163,80 @@ export default function SwipeableOrderCard({ order, onSwipeRight, onSwipeLeft, f
           </>
         )}
 
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">
+        <div className="flex flex-row items-center justify-between gap-4 lg:gap-6">
+          {/* Columna 1: Mesa y Mozo */}
+          <div className="flex-shrink-0 w-24 lg:w-32">
+            <h3 className="text-xl lg:text-2xl font-bold text-gray-900">
               Mesa {order.table_number}
             </h3>
-            <p className="text-sm text-gray-500">
-              {order.waiter?.name || 'Sin mozo asignado'}
+            <p className="text-xs lg:text-sm text-gray-500 mt-1">
+              {order.waiter?.name || 'Sin mozo'}
             </p>
-          </div>
-          <div className="text-right">
-            <div className="text-xs text-gray-500">Hora</div>
-            <div className="text-sm font-medium text-gray-900">
+            <div className="text-xs text-gray-400 mt-1">
               {formatTime(order.created_at)}
             </div>
           </div>
-        </div>
 
-        <div className="mb-4">
-          <div className="text-sm text-gray-600 mb-2">
-            <span className="font-medium">Cliente:</span> {order.customer_name}
+          {/* Columna 2: Cliente y Teléfono */}
+          <div className="flex-shrink-0 w-40 lg:w-52">
+            <div className="text-sm text-gray-700">
+              <span className="font-medium">Cliente:</span>{' '}
+              <span className="break-words">{order.customer_name}</span>
+            </div>
+            {order.customer_phone && (
+              <div className="text-xs lg:text-sm text-gray-600 mt-1">
+                <span className="font-medium">Tel:</span> {order.customer_phone}
+              </div>
+            )}
+            {order.scheduled_delivery_time && (
+              <div className="text-xs text-orange-600 font-medium mt-2 bg-orange-50 px-2 py-1 rounded inline-block">
+                ⏰ {formatDateTime(order.scheduled_delivery_time)}
+              </div>
+            )}
           </div>
-          {order.customer_phone && (
-            <div className="text-sm text-gray-600 mb-2">
-              <span className="font-medium">Tel:</span> {order.customer_phone}
-            </div>
-          )}
-          {order.scheduled_delivery_time && (
-            <div className="text-sm text-orange-600 font-medium mb-2 bg-orange-50 p-2 rounded">
-              ⏰ Para: {formatDateTime(order.scheduled_delivery_time)}
-            </div>
-          )}
-        </div>
 
-        <div className="mb-4 border-t pt-4">
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Productos:</h4>
-          <ul className="space-y-2">
-            {order.order_items && order.order_items.map((item, index) => (
-              <li key={index} className="text-sm text-gray-900">
-                <span className="font-medium">{item.quantity}x</span> {item.product_name}
-                {item.unit_price && (
-                  <span className="text-gray-500 ml-2">
-                    (${parseFloat(item.unit_price).toFixed(2)})
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="mb-4 border-t pt-4">
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-medium text-gray-700">Total:</span>
-            <span className="text-lg font-bold text-gray-900">
-              ${parseFloat(order.total_amount || 0).toFixed(2)}
-            </span>
+          {/* Columna 3: Productos */}
+          <div className="flex-1 min-w-0">
+            <h4 className="text-xs font-medium text-gray-500 mb-1 uppercase">Productos:</h4>
+            <div className="flex flex-wrap gap-x-3 lg:gap-x-4 gap-y-1">
+              {order.order_items && order.order_items.map((item, index) => (
+                <div key={index} className="text-sm text-gray-900 whitespace-nowrap">
+                  <span className="font-bold text-gray-700">{item.quantity}x</span>{' '}
+                  <span>{item.product_name}</span>
+                  {item.unit_price && (
+                    <span className="text-gray-500 ml-1">
+                      (${parseFloat(item.unit_price).toFixed(2)})
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-          {order.payment_method && (
-            <div className="text-xs text-gray-500 mt-1">
-              Pago: {order.payment_method}
+
+          {/* Columna 4: Total y Botón */}
+          <div className="flex-shrink-0 w-28 lg:w-36 flex flex-col items-end justify-center gap-2">
+            <div className="text-right">
+              <div className="text-xs text-gray-500 uppercase">Total</div>
+              <div className="text-xl lg:text-2xl font-bold text-gray-900">
+                ${parseFloat(order.total_amount || 0).toFixed(2)}
+              </div>
+              {order.payment_method && (
+                <div className="text-xs text-gray-500 mt-1 truncate max-w-[120px]">
+                  {order.payment_method}
+                </div>
+              )}
             </div>
-          )}
+            <button
+              onClick={onSwipeRight}
+              className="px-3 lg:px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors text-xs lg:text-sm whitespace-nowrap"
+            >
+              ✓ Listo
+            </button>
+          </div>
         </div>
 
-        <button
-          onClick={onSwipeRight}
-          className="w-full mt-4 px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
-        >
-          ✓ Marcar como Listo para Retirar
-        </button>
-
-        {/* Instrucciones de swipe */}
-        <div className="mt-2 text-xs text-gray-400 text-center">
+        {/* Instrucciones de swipe - Solo en pantallas pequeñas */}
+        <div className="mt-2 text-xs text-gray-400 text-center lg:hidden">
           Desliza → Listo | ← Ocultar
         </div>
       </div>
