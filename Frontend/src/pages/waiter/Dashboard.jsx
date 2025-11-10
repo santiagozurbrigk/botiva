@@ -672,6 +672,7 @@ export default function WaiterDashboard() {
                 <button
                   onClick={() => {
                     setShowEditModal(false);
+                    setShowEditMenu(false);
                     setEditingComanda(null);
                   }}
                   className="text-gray-400 hover:text-gray-600"
@@ -820,7 +821,8 @@ export default function WaiterDashboard() {
                     Guardar Cambios
                   </button>
                 </div>
-              </form>
+                </form>
+              )}
             </div>
           </div>
         </div>
