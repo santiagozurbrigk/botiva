@@ -10,10 +10,45 @@ export default function OrderDetail() {
   const { token, user } = useAuth();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [extras, setExtras] = useState([]);
+  const [editFormData, setEditFormData] = useState({
+    customer_name: '',
+    customer_phone: '',
+    customer_address: '',
+    items: [],
+    total_amount: '0.00',
+    payment_method: '',
+    table_number: '',
+    scheduled_delivery_time: '',
+  });
 
   useEffect(() => {
     fetchOrder();
+    fetchProducts();
+    fetchExtras();
   }, [id]);
+
+  const fetchProducts = async () => {
+    try {
+      const data = await api.getProducts(token);
+      setProducts(Array.isArray(data) ? data.filter(p => p.active) : []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      setProducts([]);
+    }
+  };
+
+  const fetchExtras = async () => {
+    try {
+      const data = await api.getExtras(token);
+      setExtras(Array.isArray(data) ? data.filter(e => e.active) : []);
+    } catch (error) {
+      console.error('Error fetching extras:', error);
+      setExtras([]);
+    }
+  };
 
   const fetchOrder = async () => {
     try {
@@ -84,6 +119,115 @@ export default function OrderDetail() {
     return labels[paymentStatus] || paymentStatus;
   };
 
+  const handleEditClick = () => {
+    if (!order) return;
+    setEditFormData({
+      customer_name: order.customer_name || '',
+      customer_phone: order.customer_phone || '',
+      customer_address: order.customer_address || '',
+      items: (order.order_items || []).map(item => ({
+        product_id: item.product_id || null,
+        name: item.product_name || '',
+        quantity: item.quantity || 1,
+        unit_price: item.unit_price || 0,
+        extras: [],
+      })),
+      total_amount: order.total_amount || '0.00',
+      payment_method: order.payment_method || '',
+      table_number: order.table_number || '',
+      scheduled_delivery_time: order.scheduled_delivery_time || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditItemChange = (index, field, value) => {
+    setEditFormData(prev => {
+      const newItems = [...prev.items];
+      if (field === 'product_id') {
+        const product = products.find(p => p.id === value);
+        let price = 0;
+        if (product) {
+          price = typeof product.price === 'string' 
+            ? parseFloat(product.price.replace(',', '.')) 
+            : parseFloat(product.price) || 0;
+        }
+        newItems[index] = {
+          ...newItems[index],
+          product_id: value || null,
+          name: product ? product.name : '',
+          unit_price: price,
+        };
+      } else if (field === 'quantity') {
+        newItems[index] = { ...newItems[index], quantity: parseInt(value) || 1 };
+      } else if (field === 'unit_price') {
+        newItems[index] = { ...newItems[index], unit_price: parseFloat(value) || 0 };
+      } else {
+        newItems[index] = { ...newItems[index], [field]: value };
+      }
+      
+      const total = newItems.reduce((sum, item) => {
+        return sum + (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+      }, 0);
+      
+      return {
+        ...prev,
+        items: newItems,
+        total_amount: total.toFixed(2),
+      };
+    });
+  };
+
+  const handleAddItem = () => {
+    setEditFormData(prev => ({
+      ...prev,
+      items: [...prev.items, { product_id: null, name: '', quantity: 1, unit_price: 0, extras: [] }],
+    }));
+  };
+
+  const handleRemoveItem = (index) => {
+    setEditFormData(prev => {
+      const newItems = prev.items.filter((_, i) => i !== index);
+      const total = newItems.reduce((sum, item) => {
+        return sum + (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+      }, 0);
+      return {
+        ...prev,
+        items: newItems,
+        total_amount: total.toFixed(2),
+      };
+    });
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    try {
+      const items = editFormData.items.map(item => ({
+        product_id: item.product_id || null,
+        name: item.name || 'Producto sin nombre',
+        quantity: parseInt(item.quantity) || 1,
+        unit_price: parseFloat(item.unit_price) || 0,
+      }));
+
+      const orderData = {
+        customer_name: editFormData.customer_name,
+        customer_phone: editFormData.customer_phone,
+        customer_address: editFormData.customer_address || null,
+        items,
+        total_amount: parseFloat(editFormData.total_amount) || 0,
+        payment_method: editFormData.payment_method || null,
+        table_number: editFormData.table_number || null,
+        scheduled_delivery_time: editFormData.scheduled_delivery_time || null,
+      };
+
+      await api.updateOrderFull(token, id, orderData);
+      setShowEditModal(false);
+      fetchOrder();
+    } catch (error) {
+      console.error('Error updating order:', error);
+      alert('Error al actualizar pedido: ' + (error.message || 'Error desconocido'));
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-12">Cargando...</div>;
   }
@@ -114,6 +258,15 @@ export default function OrderDetail() {
           </p>
         </div>
         <div className="flex items-center space-x-3">
+          <button
+            onClick={handleEditClick}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Editar
+          </button>
           <CustomSelect
             value={order.status}
             onChange={handleStatusChange}
@@ -284,6 +437,196 @@ export default function OrderDetail() {
                 </li>
               ))}
             </ul>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Edición */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+            <div className="mt-3">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Editar Pedido</h3>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <form onSubmit={handleSaveEdit} className="space-y-4">
+                {/* Información del Cliente */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Nombre del Cliente *</label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormData.customer_name}
+                      onChange={(e) => setEditFormData({ ...editFormData, customer_name: e.target.value })}
+                      className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Teléfono *</label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormData.customer_phone}
+                      onChange={(e) => setEditFormData({ ...editFormData, customer_phone: e.target.value })}
+                      className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Dirección</label>
+                  <input
+                    type="text"
+                    value={editFormData.customer_address}
+                    onChange={(e) => setEditFormData({ ...editFormData, customer_address: e.target.value })}
+                    className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors"
+                  />
+                </div>
+
+                {/* Campos adicionales para comandas */}
+                {(order?.order_type === 'dine_in' || order?.order_type === 'takeout') && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Número de Mesa</label>
+                      <input
+                        type="number"
+                        value={editFormData.table_number}
+                        onChange={(e) => setEditFormData({ ...editFormData, table_number: e.target.value })}
+                        className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Horario Específico</label>
+                      <input
+                        type="text"
+                        placeholder="Ej: 15:45 o En 30 minutos"
+                        value={editFormData.scheduled_delivery_time}
+                        onChange={(e) => setEditFormData({ ...editFormData, scheduled_delivery_time: e.target.value })}
+                        className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Items del Pedido */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-sm font-medium text-gray-700">Items del Pedido *</label>
+                    <button
+                      type="button"
+                      onClick={handleAddItem}
+                      className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                    >
+                      + Agregar Item
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {editFormData.items.map((item, index) => (
+                      <div key={index} className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
+                        <select
+                          value={item.product_id || ''}
+                          onChange={(e) => handleEditItemChange(index, 'product_id', e.target.value)}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value="">Seleccionar producto</option>
+                          {products.map(product => (
+                            <option key={product.id} value={product.id}>{product.name}</option>
+                          ))}
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="Nombre"
+                          value={item.name}
+                          onChange={(e) => handleEditItemChange(index, 'name', e.target.value)}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Cantidad"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => handleEditItemChange(index, 'quantity', e.target.value)}
+                          className="w-20 px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="Precio"
+                          value={item.unit_price}
+                          onChange={(e) => handleEditItemChange(index, 'unit_price', e.target.value)}
+                          className="w-24 px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(index)}
+                          className="p-2 text-red-600 hover:text-red-800"
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  {editFormData.items.length === 0 && (
+                    <p className="text-sm text-gray-500 mt-2">No hay items. Agrega al menos uno.</p>
+                  )}
+                </div>
+
+                {/* Método de Pago y Total */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Método de Pago</label>
+                    <select
+                      value={editFormData.payment_method}
+                      onChange={(e) => setEditFormData({ ...editFormData, payment_method: e.target.value })}
+                      className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm"
+                    >
+                      <option value="">Seleccionar método</option>
+                      <option value="efectivo">Efectivo</option>
+                      <option value="tarjeta">Tarjeta</option>
+                      <option value="transferencia">Transferencia</option>
+                      <option value="no_definido">No definido</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Total</label>
+                    <input
+                      type="text"
+                      value={`$${editFormData.total_amount}`}
+                      readOnly
+                      className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 bg-gray-50 sm:text-sm font-semibold"
+                    />
+                  </div>
+                </div>
+
+                {/* Botones */}
+                <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={editFormData.items.length === 0}
+                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    Guardar Cambios
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

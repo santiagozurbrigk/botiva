@@ -11,7 +11,17 @@ export default function WaiterDashboard() {
   const [selectedTable, setSelectedTable] = useState(null);
   const [showComandaModal, setShowComandaModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showEditMenu, setShowEditMenu] = useState(false);
+  const [comandas, setComandas] = useState([]);
+  const [editingComanda, setEditingComanda] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [formData, setFormData] = useState({
+    items: [],
+    total_amount: '0.00',
+    payment_method: 'no_definido',
+    scheduled_delivery_time: '',
+  });
+  const [editFormData, setEditFormData] = useState({
     items: [],
     total_amount: '0.00',
     payment_method: 'no_definido',
@@ -23,7 +33,19 @@ export default function WaiterDashboard() {
     fetchTables();
     fetchProducts();
     fetchExtras();
+    fetchComandas();
   }, [token]);
+
+  // Refrescar comandas cuando se cree o edite una
+  const fetchComandas = async () => {
+    try {
+      const data = await api.getMyComandas(token);
+      setComandas(data);
+    } catch (error) {
+      console.error('Error fetching comandas:', error);
+      setComandas([]);
+    }
+  };
 
   const fetchTables = async () => {
     try {
@@ -210,9 +232,147 @@ export default function WaiterDashboard() {
         payment_method: 'no_definido',
         scheduled_delivery_time: '',
       });
+      fetchComandas(); // Refrescar lista de comandas
     } catch (error) {
       console.error('Error creating comanda:', error);
       alert('Error al crear comanda: ' + (error.message || 'Error desconocido'));
+    }
+  };
+
+  const handleEditComanda = (comanda) => {
+    setEditingComanda(comanda);
+    setEditFormData({
+      items: (comanda.order_items || []).map(item => ({
+        product_id: item.product_id || null,
+        name: item.product_name || '',
+        quantity: item.quantity || 1,
+        unit_price: item.unit_price || 0,
+        extras: [],
+      })),
+      total_amount: comanda.total_amount || '0.00',
+      payment_method: comanda.payment_method || 'no_definido',
+      scheduled_delivery_time: comanda.scheduled_delivery_time || '',
+    });
+    setShowEditModal(true);
+    setShowEditMenu(false);
+  };
+
+  const handleEditItemChange = (index, field, value) => {
+    setEditFormData(prev => {
+      const newItems = [...prev.items];
+      if (field === 'product_id') {
+        const product = products.find(p => p.id === value);
+        let price = 0;
+        if (product) {
+          price = typeof product.price === 'string' 
+            ? parseFloat(product.price.replace(',', '.')) 
+            : parseFloat(product.price) || 0;
+        }
+        newItems[index] = {
+          ...newItems[index],
+          product_id: value || null,
+          name: product ? product.name : '',
+          unit_price: price,
+        };
+      } else if (field === 'quantity') {
+        newItems[index] = { ...newItems[index], quantity: parseInt(value) || 1 };
+      } else if (field === 'unit_price') {
+        newItems[index] = { ...newItems[index], unit_price: parseFloat(value) || 0 };
+      } else {
+        newItems[index] = { ...newItems[index], [field]: value };
+      }
+      
+      const total = newItems.reduce((sum, item) => {
+        const itemTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+        const extrasTotal = (item.extras || []).reduce((extraSum, extra) => {
+          return extraSum + (parseFloat(extra.unit_price) || 0);
+        }, 0);
+        return sum + itemTotal + extrasTotal;
+      }, 0);
+      
+      return {
+        ...prev,
+        items: newItems,
+        total_amount: total.toFixed(2),
+      };
+    });
+  };
+
+  const handleAddEditItem = () => {
+    setEditFormData(prev => ({
+      ...prev,
+      items: [...prev.items, { product_id: null, name: '', quantity: 1, unit_price: 0, extras: [] }],
+    }));
+  };
+
+  const handleRemoveEditItem = (index) => {
+    setEditFormData(prev => {
+      const newItems = prev.items.filter((_, i) => i !== index);
+      const total = newItems.reduce((sum, item) => {
+        const itemTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+        const extrasTotal = (item.extras || []).reduce((extraSum, extra) => {
+          return extraSum + (parseFloat(extra.unit_price) || 0);
+        }, 0);
+        return sum + itemTotal + extrasTotal;
+      }, 0);
+      return {
+        ...prev,
+        items: newItems,
+        total_amount: total.toFixed(2),
+      };
+    });
+  };
+
+  const handleAddProductToEdit = (productData) => {
+    setEditFormData(prev => {
+      const newItems = [...prev.items, productData];
+      const total = newItems.reduce((sum, item) => {
+        const itemTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+        const extrasTotal = (item.extras || []).reduce((extraSum, extra) => {
+          return extraSum + (parseFloat(extra.unit_price) || 0);
+        }, 0);
+        return sum + itemTotal + extrasTotal;
+      }, 0);
+      return {
+        ...prev,
+        items: newItems,
+        total_amount: total.toFixed(2),
+      };
+    });
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (editFormData.items.length === 0) {
+      alert('Por favor agrega al menos un producto a la comanda');
+      return;
+    }
+
+    try {
+      const items = editFormData.items.map(item => ({
+        product_id: item.product_id || null,
+        name: item.name || 'Producto sin nombre',
+        quantity: parseInt(item.quantity) || 1,
+        unit_price: parseFloat(item.unit_price) || 0,
+        extras: item.extras || [],
+      }));
+
+      const comandaData = {
+        items,
+        total_amount: parseFloat(editFormData.total_amount) || 0,
+        payment_method: editFormData.payment_method || 'no_definido',
+        scheduled_delivery_time: editFormData.scheduled_delivery_time || null,
+      };
+
+      await api.updateComanda(token, editingComanda.id, comandaData);
+      alert('Comanda actualizada exitosamente');
+      setShowEditModal(false);
+      setShowEditMenu(false);
+      setEditingComanda(null);
+      fetchComandas(); // Refrescar lista de comandas
+    } catch (error) {
+      console.error('Error updating comanda:', error);
+      alert('Error al actualizar comanda: ' + (error.message || 'Error desconocido'));
     }
   };
 
@@ -245,6 +405,59 @@ export default function WaiterDashboard() {
           <p className="text-yellow-800">No tienes mesas asignadas. Contacta al administrador.</p>
         </div>
       )}
+
+      {/* Lista de Comandas Pendientes */}
+      <div className="mt-8">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Mis Comandas</h2>
+        {comandas.length === 0 ? (
+          <div className="text-center py-8 bg-gray-50 rounded-lg">
+            <p className="text-gray-500">No tienes comandas pendientes</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {comandas.map((comanda) => (
+              <div key={comanda.id} className="bg-white shadow rounded-lg p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h3 className="font-semibold text-gray-900">
+                      Mesa {comanda.table_number}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {new Date(comanda.created_at).toLocaleString('es-ES')}
+                    </p>
+                  </div>
+                  <span className={`px-2 py-1 text-xs rounded-full ${
+                    comanda.status === 'pendiente' 
+                      ? 'bg-yellow-100 text-yellow-800' 
+                      : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {comanda.status === 'pendiente' ? 'Pendiente' : 'En Proceso'}
+                  </span>
+                </div>
+                <div className="mb-2">
+                  <p className="text-sm text-gray-600">
+                    {comanda.order_items?.length || 0} producto(s)
+                  </p>
+                  <p className="text-lg font-bold text-indigo-600">
+                    ${comanda.total_amount}
+                  </p>
+                  {comanda.scheduled_delivery_time && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      ⏰ {comanda.scheduled_delivery_time}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => handleEditComanda(comanda)}
+                  className="w-full mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  Editar Comanda
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Modal de Comanda */}
       {showComandaModal && selectedTable && (
@@ -446,6 +659,173 @@ export default function WaiterDashboard() {
           </div>
         </div>
       )}
+
+      {/* Modal de Edición de Comanda */}
+      {showEditModal && editingComanda && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+            <div className="mt-3">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Editar Comanda - Mesa {editingComanda.table_number}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingComanda(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {showEditMenu ? (
+                <div className="mt-4">
+                  <MenuView
+                    products={products}
+                    extras={extras}
+                    onAddProduct={handleAddProductToEdit}
+                    onBack={() => setShowEditMenu(false)}
+                  />
+                </div>
+              ) : (
+                <form onSubmit={handleSaveEdit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Horario Específico (Opcional)</label>
+                    <input
+                      type="text"
+                      value={editFormData.scheduled_delivery_time}
+                      onChange={(e) => setEditFormData({ ...editFormData, scheduled_delivery_time: e.target.value })}
+                      className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors bg-white"
+                      placeholder="Ej: Para las 20:00, En 30 minutos, etc."
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Escribe el horario específico si el cliente lo solicita</p>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-medium text-gray-700">Productos</label>
+                      <button
+                        type="button"
+                        onClick={() => setShowEditMenu(true)}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-medium"
+                      >
+                        📋 Ver Menú
+                      </button>
+                    </div>
+                    {editFormData.items.length === 0 ? (
+                      <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                        <p className="text-gray-500 mb-2">No hay productos agregados</p>
+                        <button
+                          type="button"
+                          onClick={() => setShowEditMenu(true)}
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-medium"
+                        >
+                          Agregar desde el menú
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {editFormData.items.map((item, index) => (
+                          <div key={index} className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-gray-900">{item.quantity}x</span>
+                                  <span className="text-gray-700">{item.name}</span>
+                                  <span className="text-sm text-gray-500">
+                                    (${parseFloat(item.unit_price || 0).toFixed(2)} c/u)
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 ml-4">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newQuantity = Math.max(1, (item.quantity || 1) - 1);
+                                    handleEditItemChange(index, 'quantity', newQuantity);
+                                  }}
+                                  className="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded flex items-center justify-center text-gray-700 font-bold"
+                                >
+                                  −
+                                </button>
+                                <span className="w-8 text-center font-medium">{item.quantity}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newQuantity = (item.quantity || 1) + 1;
+                                    handleEditItemChange(index, 'quantity', newQuantity);
+                                  }}
+                                  className="w-6 h-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded flex items-center justify-center font-bold"
+                                >
+                                  +
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveEditItem(index)}
+                                  className="ml-2 px-2 py-1 text-red-600 hover:text-red-900 text-sm"
+                                >
+                                  Eliminar
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Método de Pago</label>
+                    <select
+                      value={editFormData.payment_method}
+                      onChange={(e) => setEditFormData({ ...editFormData, payment_method: e.target.value })}
+                      className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm bg-white"
+                    >
+                      <option value="no_definido">No definido</option>
+                      <option value="efectivo">Efectivo</option>
+                      <option value="tarjeta">Tarjeta</option>
+                      <option value="transferencia">Transferencia</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Total</label>
+                    <div className="mt-1 px-4 py-2.5 bg-gray-100 rounded-lg text-lg font-bold text-gray-900">
+                      ${editFormData.total_amount}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setShowEditMenu(false);
+                      setEditingComanda(null);
+                    }}
+                    className="px-6 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={editFormData.items.length === 0}
+                    className="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    Guardar Cambios
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

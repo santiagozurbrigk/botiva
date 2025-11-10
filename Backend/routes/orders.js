@@ -275,6 +275,256 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
+// PUT /api/orders/:id/full - Actualizar pedido completo (incluyendo items)
+router.put('/:id/full', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      customer_name,
+      customer_phone,
+      customer_address,
+      items,
+      total_amount,
+      payment_method,
+      table_number,
+      scheduled_delivery_time,
+      status,
+      assigned_rider_id,
+      payment_status
+    } = req.body;
+
+    // Validar que el ID sea un UUID válido
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return res.status(400).json({ error: 'ID de pedido inválido. Debe ser un UUID válido.' });
+    }
+
+    const { supabaseAdmin } = req.app.locals;
+
+    // Verificar que el pedido existe
+    const { data: existingOrder, error: fetchError } = await supabaseAdmin
+      .from('orders')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existingOrder) {
+      return res.status(404).json({ error: 'Pedido no encontrado' });
+    }
+
+    // Preparar actualizaciones del pedido
+    const orderUpdates = {};
+    if (customer_name !== undefined) orderUpdates.customer_name = customer_name;
+    if (customer_phone !== undefined) orderUpdates.customer_phone = customer_phone;
+    if (customer_address !== undefined) orderUpdates.customer_address = customer_address;
+    if (total_amount !== undefined) orderUpdates.total_amount = parseFloat(total_amount);
+    if (payment_method !== undefined) orderUpdates.payment_method = payment_method;
+    if (table_number !== undefined) orderUpdates.table_number = table_number ? parseInt(table_number) : null;
+    if (scheduled_delivery_time !== undefined) {
+      const cleanScheduledTime = typeof scheduled_delivery_time === 'string'
+        ? scheduled_delivery_time.trim()
+        : scheduled_delivery_time;
+      orderUpdates.scheduled_delivery_time = cleanScheduledTime || null;
+    }
+    if (status !== undefined) {
+      orderUpdates.status = status;
+      if (status === 'entregado') {
+        orderUpdates.payment_status = 'pagado';
+      }
+    }
+    if (assigned_rider_id !== undefined) {
+      orderUpdates.assigned_rider_id = assigned_rider_id === '' ? null : assigned_rider_id;
+    }
+    if (payment_status !== undefined && status !== 'entregado') {
+      orderUpdates.payment_status = payment_status;
+    }
+
+    // Actualizar el pedido
+    if (Object.keys(orderUpdates).length > 0) {
+      const { error: updateError } = await supabaseAdmin
+        .from('orders')
+        .update(orderUpdates)
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+    }
+
+    // Si se proporcionan items, actualizar los items del pedido
+    if (items && Array.isArray(items)) {
+      // Eliminar items existentes
+      const { error: deleteError } = await supabaseAdmin
+        .from('order_items')
+        .delete()
+        .eq('order_id', id);
+
+      if (deleteError) throw deleteError;
+
+      // Insertar nuevos items
+      if (items.length > 0) {
+        const orderItems = items.map(item => ({
+          order_id: id,
+          product_id: item.product_id || null,
+          product_name: item.name || 'Producto sin nombre',
+          quantity: parseInt(item.quantity) || 1,
+          unit_price: parseFloat(item.unit_price) || 0,
+        }));
+
+        const { error: itemsError } = await supabaseAdmin
+          .from('order_items')
+          .insert(orderItems);
+
+        if (itemsError) throw itemsError;
+      }
+    }
+
+    // Obtener el pedido actualizado
+    const { data: updatedOrder, error: fetchUpdatedError } = await supabaseAdmin
+      .from('orders')
+      .select(`
+        *,
+        rider:riders(id, name, phone),
+        waiter:waiters(id, name),
+        order_items(*)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (fetchUpdatedError) throw fetchUpdatedError;
+
+    // Registrar evento
+    await supabaseAdmin
+      .from('order_events')
+      .insert({
+        order_id: id,
+        event_type: 'updated',
+        description: 'Pedido editado completamente',
+      });
+
+    res.json(updatedOrder);
+  } catch (error) {
+    console.error('Error updating order full:', error);
+    res.status(500).json({ error: 'Error al actualizar pedido' });
+  }
+});
+
+// PUT /api/orders/comanda/:id - Actualizar comanda (para mozos)
+router.put('/comanda/:id', authenticateWaiter, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      items,
+      total_amount,
+      payment_method,
+      scheduled_delivery_time
+    } = req.body;
+
+    // Validar que el ID sea un UUID válido
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return res.status(400).json({ error: 'ID de comanda inválido. Debe ser un UUID válido.' });
+    }
+
+    const { supabaseAdmin } = req.app.locals;
+    const waiterId = req.user.waiter.id;
+
+    // Verificar que la comanda existe y pertenece a este mozo
+    const { data: existingOrder, error: fetchError } = await supabaseAdmin
+      .from('orders')
+      .select('id, waiter_id, status')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existingOrder) {
+      return res.status(404).json({ error: 'Comanda no encontrada' });
+    }
+
+    if (existingOrder.waiter_id !== waiterId) {
+      return res.status(403).json({ error: 'No tienes permiso para editar esta comanda' });
+    }
+
+    // Solo permitir editar comandas pendientes o en proceso
+    if (existingOrder.status === 'entregado' || existingOrder.status === 'cancelado') {
+      return res.status(400).json({ error: 'No se puede editar una comanda entregada o cancelada' });
+    }
+
+    // Preparar actualizaciones
+    const orderUpdates = {};
+    if (total_amount !== undefined) orderUpdates.total_amount = parseFloat(total_amount);
+    if (payment_method !== undefined) orderUpdates.payment_method = payment_method;
+    if (scheduled_delivery_time !== undefined) {
+      const cleanScheduledTime = typeof scheduled_delivery_time === 'string'
+        ? scheduled_delivery_time.trim()
+        : scheduled_delivery_time;
+      orderUpdates.scheduled_delivery_time = cleanScheduledTime || null;
+    }
+
+    // Actualizar el pedido
+    if (Object.keys(orderUpdates).length > 0) {
+      const { error: updateError } = await supabaseAdmin
+        .from('orders')
+        .update(orderUpdates)
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+    }
+
+    // Si se proporcionan items, actualizar los items
+    if (items && Array.isArray(items)) {
+      // Eliminar items existentes
+      const { error: deleteError } = await supabaseAdmin
+        .from('order_items')
+        .delete()
+        .eq('order_id', id);
+
+      if (deleteError) throw deleteError;
+
+      // Insertar nuevos items
+      if (items.length > 0) {
+        const orderItems = items.map(item => ({
+          order_id: id,
+          product_id: item.product_id || null,
+          product_name: item.name || 'Producto sin nombre',
+          quantity: parseInt(item.quantity) || 1,
+          unit_price: parseFloat(item.unit_price) || 0,
+        }));
+
+        const { error: itemsError } = await supabaseAdmin
+          .from('order_items')
+          .insert(orderItems);
+
+        if (itemsError) throw itemsError;
+      }
+    }
+
+    // Obtener la comanda actualizada
+    const { data: updatedOrder, error: fetchUpdatedError } = await supabaseAdmin
+      .from('orders')
+      .select(`
+        *,
+        waiter:waiters(id, name),
+        order_items(*)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (fetchUpdatedError) throw fetchUpdatedError;
+
+    // Registrar evento
+    await supabaseAdmin
+      .from('order_events')
+      .insert({
+        order_id: id,
+        event_type: 'updated',
+        description: 'Comanda editada por mozo',
+      });
+
+    res.json(updatedOrder);
+  } catch (error) {
+    console.error('Error updating comanda:', error);
+    res.status(500).json({ error: 'Error al actualizar comanda' });
+  }
+});
+
 // PATCH /api/orders/:id/status - Actualizar solo estado (para riders)
 router.patch('/:id/status', authenticateRider, async (req, res) => {
   try {
@@ -399,6 +649,43 @@ router.patch('/:id/payment-status', authenticateRider, async (req, res) => {
   } catch (error) {
     console.error('Error updating payment status:', error);
     res.status(500).json({ error: 'Error al actualizar estado de pago' });
+  }
+});
+
+// GET /api/orders/waiter/me - Obtener comandas del mozo autenticado
+router.get('/waiter/me', authenticateWaiter, async (req, res) => {
+  try {
+    const { supabaseAdmin } = req.app.locals;
+    const waiterId = req.user.waiter.id;
+    const { status } = req.query;
+
+    let query = supabaseAdmin
+      .from('orders')
+      .select(`
+        *,
+        waiter:waiters(id, name),
+        order_items(*)
+      `)
+      .eq('waiter_id', waiterId)
+      .in('order_type', ['dine_in', 'takeout'])
+      .order('created_at', { ascending: false });
+
+    // Filtrar por estado si se proporciona
+    if (status) {
+      query = query.eq('status', status);
+    } else {
+      // Por defecto, mostrar solo pendientes y en_proceso (editables)
+      query = query.in('status', ['pendiente', 'en_proceso']);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    res.json(data || []);
+  } catch (error) {
+    console.error('Error fetching waiter comandas:', error);
+    res.status(500).json({ error: 'Error al obtener comandas' });
   }
 });
 

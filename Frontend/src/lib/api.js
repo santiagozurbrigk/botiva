@@ -161,6 +161,55 @@ export const api = {
     return response.json();
   },
 
+  // Actualizar pedido completo (incluyendo items)
+  updateOrderFull: async (token, id, orderData) => {
+    const response = await fetch(`${API_URL}/api/orders/${id}/full`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(orderData),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al actualizar pedido');
+    }
+    return data;
+  },
+
+  // Obtener comandas del mozo autenticado
+  getMyComandas: async (token, status = null) => {
+    const url = status 
+      ? `${API_URL}/api/orders/waiter/me?status=${status}`
+      : `${API_URL}/api/orders/waiter/me`;
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al obtener comandas');
+    }
+    return Array.isArray(data) ? data : [];
+  },
+
+  // Actualizar comanda (para mozos)
+  updateComanda: async (token, id, comandaData) => {
+    const response = await fetch(`${API_URL}/api/orders/comanda/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(comandaData),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al actualizar comanda');
+    }
+    return data;
+  },
+
   // Actualizar estado del pedido (para riders)
   updateOrderStatus: async (token, id, status) => {
     const response = await fetch(`${API_URL}/api/orders/${id}/status`, {
