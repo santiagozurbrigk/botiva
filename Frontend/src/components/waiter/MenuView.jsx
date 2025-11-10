@@ -54,27 +54,30 @@ export default function MenuView({ products, extras, onAddProduct, onBack }) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 md:space-y-6">
       {/* Header con botón de volver */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900">Menú</h2>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Menú</h2>
         <button
           onClick={onBack}
-          className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+          className="w-full sm:w-auto px-4 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
         >
-          ← Volver a Comanda
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Volver a Comanda
         </button>
       </div>
 
-      {/* Filtros de categoría */}
-      <div className="flex flex-wrap gap-2">
+      {/* Filtros de categoría - Scroll horizontal en móvil */}
+      <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
         {categories.map(category => (
           <button
             key={category}
             onClick={() => setSelectedCategory(category)}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`px-4 py-2.5 rounded-lg font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
               selectedCategory === category
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-indigo-600 text-white shadow-md'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
@@ -84,7 +87,7 @@ export default function MenuView({ products, extras, onAddProduct, onBack }) {
       </div>
 
       {/* Grid de productos */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
         {filteredProducts.map(product => {
           const quantity = quantities[product.id] || 0;
           const price = typeof product.price === 'string' 
@@ -94,21 +97,21 @@ export default function MenuView({ products, extras, onAddProduct, onBack }) {
           return (
             <div
               key={product.id}
-              className="bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-indigo-500 transition-colors"
+              className="bg-white border-2 border-gray-200 rounded-xl p-4 md:p-5 hover:border-indigo-500 hover:shadow-lg transition-all"
             >
               {product.image_url && (
                 <img
                   src={product.image_url}
                   alt={product.name}
-                  className="w-full h-32 object-cover rounded-lg mb-2"
+                  className="w-full h-32 md:h-40 object-cover rounded-lg mb-3"
                 />
               )}
-              <h3 className="font-semibold text-gray-900 mb-1">{product.name}</h3>
+              <h3 className="font-semibold text-gray-900 mb-1 text-base md:text-lg">{product.name}</h3>
               {product.description && (
-                <p className="text-xs text-gray-600 mb-2 line-clamp-2">{product.description}</p>
+                <p className="text-xs md:text-sm text-gray-600 mb-3 line-clamp-2">{product.description}</p>
               )}
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-lg font-bold text-indigo-600">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-lg md:text-xl font-bold text-indigo-600">
                   ${price.toFixed(2)}
                 </span>
                 {product.category && (
@@ -119,20 +122,20 @@ export default function MenuView({ products, extras, onAddProduct, onBack }) {
               </div>
 
               {/* Controles de cantidad */}
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => handleQuantityChange(product.id, -1)}
-                    className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center font-bold text-gray-700"
+                    className="w-8 h-8 md:w-9 md:h-9 bg-gray-200 hover:bg-gray-300 rounded-lg flex items-center justify-center font-bold text-gray-700 text-lg transition-colors"
                   >
                     −
                   </button>
-                  <span className="w-8 text-center font-medium">{quantity}</span>
+                  <span className="w-8 md:w-10 text-center font-medium text-base md:text-lg">{quantity}</span>
                   <button
                     type="button"
                     onClick={() => handleQuantityChange(product.id, 1)}
-                    className="w-8 h-8 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center font-bold"
+                    className="w-8 h-8 md:w-9 md:h-9 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center justify-center font-bold text-lg transition-colors"
                   >
                     +
                   </button>
@@ -141,7 +144,7 @@ export default function MenuView({ products, extras, onAddProduct, onBack }) {
                   type="button"
                   onClick={() => handleAddToOrder(product)}
                   disabled={quantity === 0}
-                  className={`px-3 py-1 rounded-lg font-medium text-sm transition-colors ${
+                  className={`px-4 py-2 rounded-lg font-medium text-sm md:text-base transition-colors flex-1 ${
                     quantity > 0
                       ? 'bg-green-600 hover:bg-green-700 text-white'
                       : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -157,10 +160,9 @@ export default function MenuView({ products, extras, onAddProduct, onBack }) {
 
       {filteredProducts.length === 0 && (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <p className="text-gray-500">No hay productos en esta categoría</p>
+          <p className="text-gray-500 text-lg">No hay productos en esta categoría</p>
         </div>
       )}
     </div>
   );
 }
-
