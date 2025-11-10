@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
 import MenuView from '../../components/waiter/MenuView';
@@ -588,15 +588,8 @@ export default function WaiterDashboard() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('tables'); // 'tables', 'comanda', 'edit'
 
-  useEffect(() => {
-    fetchTables();
-    fetchProducts();
-    fetchExtras();
-    fetchComandas();
-  }, [token]);
-
   // Refrescar comandas cuando se cree o edite una
-  const fetchComandas = async () => {
+  const fetchComandas = useCallback(async () => {
     try {
       const data = await api.getMyComandas(token);
       setComandas(data);
@@ -604,9 +597,9 @@ export default function WaiterDashboard() {
       console.error('Error fetching comandas:', error);
       setComandas([]);
     }
-  };
+  }, [token]);
 
-  const fetchTables = async () => {
+  const fetchTables = useCallback(async () => {
     try {
       const data = await api.getMyTables(token);
       setTables(data.map(t => t.table_number).sort((a, b) => a - b));
@@ -616,9 +609,9 @@ export default function WaiterDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       const data = await api.getProducts(token);
       setProducts(Array.isArray(data) ? data.filter(p => p.active) : []);
@@ -626,9 +619,9 @@ export default function WaiterDashboard() {
       console.error('Error fetching products:', error);
       setProducts([]);
     }
-  };
+  }, [token]);
 
-  const fetchExtras = async () => {
+  const fetchExtras = useCallback(async () => {
     try {
       const data = await api.getExtras(token);
       setExtras(Array.isArray(data) ? data.filter(e => e.active) : []);
@@ -636,7 +629,16 @@ export default function WaiterDashboard() {
       console.error('Error fetching extras:', error);
       setExtras([]);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (token) {
+      fetchTables();
+      fetchProducts();
+      fetchExtras();
+      fetchComandas();
+    }
+  }, [token, fetchTables, fetchProducts, fetchExtras, fetchComandas]);
 
   const handleTableClick = (tableNumber) => {
     setSelectedTable(tableNumber);
@@ -970,19 +972,24 @@ export default function WaiterDashboard() {
 
   // Controlar visibilidad del header del layout según la vista actual
   useEffect(() => {
-    const layoutHeader = document.querySelector('header');
-    if (!layoutHeader) return;
+    // Usar setTimeout para asegurar que el DOM esté listo
+    const timer = setTimeout(() => {
+      const layoutHeader = document.querySelector('header');
+      if (!layoutHeader) return;
 
-    if (view === 'tables') {
-      // Mostrar header en vista de mesas
-      layoutHeader.style.display = '';
-    } else if (view === 'comanda' || view === 'edit') {
-      // Ocultar header en vistas de comanda/edición
-      layoutHeader.style.display = 'none';
-    }
+      if (view === 'tables') {
+        // Mostrar header en vista de mesas
+        layoutHeader.style.display = '';
+      } else if (view === 'comanda' || view === 'edit') {
+        // Ocultar header en vistas de comanda/edición
+        layoutHeader.style.display = 'none';
+      }
+    }, 0);
 
     // Cleanup: restaurar header al desmontar
     return () => {
+      clearTimeout(timer);
+      const layoutHeader = document.querySelector('header');
       if (layoutHeader) {
         layoutHeader.style.display = '';
       }
