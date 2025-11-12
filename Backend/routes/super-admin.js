@@ -51,7 +51,17 @@ router.get('/restaurants/:id', authenticateSuperAdmin, async (req, res) => {
 router.post('/restaurants', authenticateSuperAdmin, async (req, res) => {
   try {
     const { name, email, phone, address, subscription_status, subscription_end_date } = req.body;
+    
+    console.log('🍽️  Creando restaurante:', { name, email });
+    
+    // Verificar que req.user y req.user.superAdmin existen
+    if (!req.user || !req.user.superAdmin) {
+      console.error('❌ Error: req.user.superAdmin no está definido');
+      return res.status(500).json({ error: 'Error de autenticación' });
+    }
+
     const superAdminId = req.user.superAdmin.id;
+    console.log('✅ Super Admin ID:', superAdminId);
 
     if (!name || !email) {
       return res.status(400).json({ error: 'Nombre y email son requeridos' });
@@ -60,11 +70,16 @@ router.post('/restaurants', authenticateSuperAdmin, async (req, res) => {
     const { supabaseAdmin } = req.app.locals;
 
     // Verificar que el email no esté en uso
-    const { data: existingRestaurant } = await supabaseAdmin
+    const { data: existingRestaurant, error: checkError } = await supabaseAdmin
       .from('restaurants')
       .select('id')
       .eq('email', email)
       .single();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('❌ Error al verificar email existente:', checkError);
+      throw checkError;
+    }
 
     if (existingRestaurant) {
       return res.status(409).json({ error: 'Ya existe un restaurante con ese email' });
@@ -83,18 +98,31 @@ router.post('/restaurants', authenticateSuperAdmin, async (req, res) => {
       active: true,
     };
 
+    console.log('📝 Datos del restaurante a insertar:', restaurantData);
+
     const { data: restaurant, error } = await supabaseAdmin
       .from('restaurants')
       .insert(restaurantData)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Error al insertar restaurante:', error);
+      console.error('   Código:', error.code);
+      console.error('   Mensaje:', error.message);
+      console.error('   Detalles:', error.details);
+      console.error('   Hint:', error.hint);
+      throw error;
+    }
 
+    console.log('✅ Restaurante creado exitosamente:', restaurant.id);
     res.status(201).json(restaurant);
   } catch (error) {
-    console.error('Error creating restaurant:', error);
-    res.status(500).json({ error: 'Error al crear restaurante' });
+    console.error('❌ Error creating restaurant:', error);
+    res.status(500).json({ 
+      error: 'Error al crear restaurante',
+      details: error.message || 'Error desconocido'
+    });
   }
 });
 
@@ -103,6 +131,8 @@ router.post('/restaurants/:id/admin', authenticateSuperAdmin, async (req, res) =
   try {
     const { id: restaurantId } = req.params;
     const { name, email, password } = req.body;
+
+    console.log('👤 Creando admin para restaurante:', { restaurantId, name, email });
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Nombre, email y contraseña son requeridos' });
@@ -118,42 +148,78 @@ router.post('/restaurants/:id/admin', authenticateSuperAdmin, async (req, res) =
       .single();
 
     if (restaurantError || !restaurant) {
+      console.error('❌ Restaurante no encontrado:', restaurantError);
       return res.status(404).json({ error: 'Restaurante no encontrado' });
     }
 
+    console.log('✅ Restaurante encontrado:', restaurant.name);
+
     // Verificar que el email no esté en uso
-    const { data: existingAdmin } = await supabaseAdmin
+    const { data: existingAdmin, error: checkError } = await supabaseAdmin
       .from('admins')
       .select('id')
       .eq('email', email)
       .single();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('❌ Error al verificar email existente:', checkError);
+      throw checkError;
+    }
 
     if (existingAdmin) {
       return res.status(409).json({ error: 'Ya existe un administrador con ese email' });
     }
 
     // Crear usuario en Supabase Auth
+    console.log('🔐 Creando usuario en Supabase Auth...');
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
     });
 
-    if (authError) throw authError;
+    if (authError) {
+      console.error('❌ Error al crear usuario en Auth:', authError);
+      throw authError;
+    }
+
+    console.log('✅ Usuario creado en Auth:', authUser.user.id);
 
     // Crear perfil de admin asociado al restaurante
+    const adminData = {
+      auth_user_id: authUser.user.id,
+      name,
+      email,
+      restaurant_id: restaurantId,
+    };
+
+    console.log('📝 Insertando admin en base de datos:', adminData);
+
     const { data: admin, error: adminError } = await supabaseAdmin
       .from('admins')
-      .insert({
-        auth_user_id: authUser.user.id,
-        name,
-        email,
-        restaurant_id: restaurantId,
-      })
+      .insert(adminData)
       .select()
       .single();
 
-    if (adminError) throw adminError;
+    if (adminError) {
+      console.error('❌ Error al insertar admin:', adminError);
+      console.error('   Código:', adminError.code);
+      console.error('   Mensaje:', adminError.message);
+      console.error('   Detalles:', adminError.details);
+      console.error('   Hint:', adminError.hint);
+      
+      // Si falla la inserción, eliminar el usuario de Auth para mantener consistencia
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+        console.log('🧹 Usuario eliminado de Auth debido a error en inserción');
+      } catch (deleteError) {
+        console.error('⚠️  Error al eliminar usuario de Auth:', deleteError);
+      }
+      
+      throw adminError;
+    }
+
+    console.log('✅ Admin creado exitosamente:', admin.id);
 
     res.status(201).json({
       admin,
@@ -161,8 +227,11 @@ router.post('/restaurants/:id/admin', authenticateSuperAdmin, async (req, res) =
       message: 'Cuenta de administrador creada exitosamente',
     });
   } catch (error) {
-    console.error('Error creating admin:', error);
-    res.status(500).json({ error: 'Error al crear cuenta de administrador' });
+    console.error('❌ Error creating admin:', error);
+    res.status(500).json({ 
+      error: 'Error al crear cuenta de administrador',
+      details: error.message || 'Error desconocido'
+    });
   }
 });
 
@@ -221,6 +290,78 @@ router.get('/restaurants/:id/admins', authenticateSuperAdmin, async (req, res) =
   } catch (error) {
     console.error('Error fetching admins:', error);
     res.status(500).json({ error: 'Error al obtener administradores' });
+  }
+});
+
+// GET /api/super-admin/restaurants/:id/details - Obtener detalles completos del restaurante
+router.get('/restaurants/:id/details', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const { id: restaurantId } = req.params;
+    const { supabaseAdmin } = req.app.locals;
+
+    // Obtener información del restaurante
+    const { data: restaurant, error: restaurantError } = await supabaseAdmin
+      .from('restaurants')
+      .select('*')
+      .eq('id', restaurantId)
+      .single();
+
+    if (restaurantError || !restaurant) {
+      return res.status(404).json({ error: 'Restaurante no encontrado' });
+    }
+
+    // Obtener admins
+    const { data: admins } = await supabaseAdmin
+      .from('admins')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .order('created_at', { ascending: false });
+
+    // Obtener estadísticas básicas
+    const { data: orders } = await supabaseAdmin
+      .from('orders')
+      .select('id, status, total_amount, created_at')
+      .eq('restaurant_id', restaurantId);
+
+    const { data: products } = await supabaseAdmin
+      .from('products')
+      .select('id, active')
+      .eq('restaurant_id', restaurantId);
+
+    const { data: waiters } = await supabaseAdmin
+      .from('waiters')
+      .select('id, active')
+      .eq('restaurant_id', restaurantId);
+
+    const { data: riders } = await supabaseAdmin
+      .from('riders')
+      .select('id, active')
+      .eq('restaurant_id', restaurantId);
+
+    // Calcular estadísticas
+    const stats = {
+      totalOrders: orders?.length || 0,
+      totalProducts: products?.length || 0,
+      activeProducts: products?.filter(p => p.active).length || 0,
+      totalWaiters: waiters?.length || 0,
+      activeWaiters: waiters?.filter(w => w.active).length || 0,
+      totalRiders: riders?.length || 0,
+      activeRiders: riders?.filter(r => r.active).length || 0,
+      totalRevenue: orders
+        ?.filter(o => o.status === 'entregado')
+        .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0) || 0,
+      pendingOrders: orders?.filter(o => o.status === 'pendiente').length || 0,
+      completedOrders: orders?.filter(o => o.status === 'entregado').length || 0,
+    };
+
+    res.json({
+      restaurant,
+      admins: admins || [],
+      statistics: stats,
+    });
+  } catch (error) {
+    console.error('Error fetching restaurant details:', error);
+    res.status(500).json({ error: 'Error al obtener detalles del restaurante' });
   }
 });
 

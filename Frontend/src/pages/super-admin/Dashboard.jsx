@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
 
 export default function SuperAdminDashboard() {
+  const navigate = useNavigate();
   const { token, logout } = useAuth();
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +59,9 @@ export default function SuperAdminDashboard() {
       });
       fetchRestaurants();
     } catch (err) {
-      alert(err.message || 'Error al crear restaurante');
+      console.error('Error creating restaurant:', err);
+      const errorMessage = err.message || err.details || 'Error al crear restaurante';
+      alert(errorMessage);
     }
   };
 
@@ -169,6 +173,12 @@ export default function SuperAdminDashboard() {
                   {formatDate(restaurant.created_at)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                  <button
+                    onClick={() => navigate(`/super-admin/restaurants/${restaurant.id}`)}
+                    className="text-blue-600 hover:text-blue-900"
+                  >
+                    Ver Detalles
+                  </button>
                   <button
                     onClick={() => setShowAdminModal(restaurant.id)}
                     className="text-indigo-600 hover:text-indigo-900"

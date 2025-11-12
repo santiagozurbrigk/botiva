@@ -7,10 +7,12 @@ const router = express.Router();
 router.get('/', authenticateAdmin, async (req, res) => {
   try {
     const { supabaseAdmin } = req.app.locals;
+    const restaurantId = req.restaurantId;
 
     const { data, error } = await supabaseAdmin
       .from('waiters')
       .select('*')
+      .eq('restaurant_id', restaurantId) // Filtrar por restaurant_id
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -89,6 +91,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
     if (authError) throw authError;
 
     // Crear perfil de waiter
+    const restaurantId = req.restaurantId;
     const { data: waiter, error: waiterError } = await supabaseAdmin
       .from('waiters')
       .insert({
@@ -97,6 +100,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
         phone,
         email,
         active: true,
+        restaurant_id: restaurantId, // Asociar waiter al restaurante
       })
       .select()
       .single();

@@ -132,6 +132,9 @@ router.get('/statistics', authenticateAdmin, async (req, res) => {
     const dateFrom = date_from || defaultDateFrom.toISOString();
     const dateTo = date_to || defaultDateTo.toISOString();
 
+    // Obtener restaurant_id del admin autenticado
+    const restaurantId = req.restaurantId;
+
     // ========== ESTADÍSTICAS FINANCIERAS ==========
     const { data: orders, error: ordersError } = await supabaseAdmin
       .from('orders')
@@ -141,6 +144,7 @@ router.get('/statistics', authenticateAdmin, async (req, res) => {
         rider:riders(id, name),
         order_items(*)
       `)
+      .eq('restaurant_id', restaurantId) // Filtrar por restaurant_id
       .gte('created_at', dateFrom)
       .lte('created_at', dateTo);
 

@@ -51,6 +51,31 @@ router.post('/', async (req, res) => {
     // Determinar order_type por defecto
     const finalOrderType = order_type || 'delivery';
 
+    // Obtener restaurant_id
+    let restaurantId = null;
+    if (waiter_id) {
+      // Si hay waiter_id, obtener restaurant_id del waiter
+      const { data: waiter } = await supabaseAdmin
+        .from('waiters')
+        .select('restaurant_id')
+        .eq('id', waiter_id)
+        .single();
+      if (waiter) restaurantId = waiter.restaurant_id;
+    } else if (items && items.length > 0 && items[0].product_id) {
+      // Si no hay waiter_id, obtener restaurant_id del primer producto
+      const { data: product } = await supabaseAdmin
+        .from('products')
+        .select('restaurant_id')
+        .eq('id', items[0].product_id)
+        .single();
+      if (product) restaurantId = product.restaurant_id;
+    }
+
+    // Si no se pudo obtener restaurant_id, intentar desde el body (para n8n)
+    if (!restaurantId && req.body.restaurant_id) {
+      restaurantId = req.body.restaurant_id;
+    }
+
     // Crear el pedido
     const orderData = {
       external_id: finalExternalId,
@@ -61,6 +86,7 @@ router.post('/', async (req, res) => {
       payment_method: payment_method || null,
       status: 'pendiente',
       order_type: finalOrderType,
+      restaurant_id: restaurantId, // Asociar pedido al restaurante
     };
 
     // Agregar campos opcionales si existen
@@ -114,10 +140,11 @@ router.post('/', async (req, res) => {
 });
 
 // GET /api/orders - Listar pedidos
-router.get('/', async (req, res) => {
+router.get('/', authenticateAdmin, async (req, res) => {
   try {
     const { supabaseAdmin } = req.app.locals;
     const { status, rider_id, date_from, date_to } = req.query;
+    const restaurantId = req.restaurantId; // Obtener restaurant_id del middleware
 
     let query = supabaseAdmin
       .from('orders')
@@ -127,6 +154,7 @@ router.get('/', async (req, res) => {
         waiter:waiters(id, name),
         order_items(*)
       `)
+      .eq('restaurant_id', restaurantId) // Filtrar por restaurant_id
       .order('created_at', { ascending: false });
 
     if (status) {

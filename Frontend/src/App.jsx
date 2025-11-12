@@ -21,6 +21,7 @@ import StockRequest from './pages/stock/StockRequest';
 import SuperAdminLayout from './components/super-admin/SuperAdminLayout';
 import SuperAdminLogin from './pages/super-admin/Login';
 import SuperAdminDashboard from './pages/super-admin/Dashboard';
+import RestaurantDetails from './pages/super-admin/RestaurantDetails';
 
 function PrivateRoute({ children, requiredRole }) {
   const { user, loading } = useAuth();
@@ -110,6 +111,7 @@ function AppRoutes() {
             <SuperAdminLayout>
               <Routes>
                 <Route index element={<SuperAdminDashboard />} />
+                <Route path="restaurants/:id" element={<RestaurantDetails />} />
               </Routes>
             </SuperAdminLayout>
           </PrivateRoute>

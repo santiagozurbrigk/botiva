@@ -39,7 +39,14 @@ export const authenticateAdmin = async (req, res, next) => {
       return res.status(403).json({ error: 'Acceso denegado' });
     }
 
+    // Verificar que el admin tenga un restaurant_id asignado
+    if (!admin.restaurant_id) {
+      console.error('Admin sin restaurant_id asignado:', admin.id);
+      return res.status(403).json({ error: 'Admin no tiene restaurante asignado' });
+    }
+
     req.user = { ...user, admin };
+    req.restaurantId = admin.restaurant_id; // Agregar restaurant_id al request para facilitar el acceso
     next();
   } catch (error) {
     console.error('Auth error:', error);

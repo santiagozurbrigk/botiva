@@ -8,8 +8,18 @@ router.get('/', async (req, res) => {
   try {
     const { supabaseAdmin } = req.app.locals;
     const { category, active } = req.query;
+    
+    // Si hay un admin autenticado, filtrar por restaurant_id
+    const restaurantId = req.restaurantId;
 
-    let query = supabaseAdmin.from('products').select('*').order('created_at', { ascending: false });
+    let query = supabaseAdmin.from('products').select('*');
+    
+    // Filtrar por restaurant_id si está disponible (admin autenticado)
+    if (restaurantId) {
+      query = query.eq('restaurant_id', restaurantId);
+    }
+    
+    query = query.order('created_at', { ascending: false });
 
     if (category) {
       query = query.eq('category', category);
@@ -59,6 +69,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', authenticateAdmin, async (req, res) => {
   try {
     const { name, description, price, category, image_url, active } = req.body;
+    const restaurantId = req.restaurantId;
 
     if (!name || !price || !category) {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
@@ -75,6 +86,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
         category,
         image_url,
         active: active !== undefined ? active : true,
+        restaurant_id: restaurantId, // Asociar producto al restaurante
       })
       .select()
       .single();
@@ -93,6 +105,7 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, price, category, image_url, active } = req.body;
+    const restaurantId = req.restaurantId;
 
     const { supabaseAdmin } = req.app.locals;
 
@@ -108,6 +121,7 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
       .from('products')
       .update(updates)
       .eq('id', id)
+      .eq('restaurant_id', restaurantId) // Asegurar que solo actualice productos de su restaurante
       .select()
       .single();
 
@@ -128,12 +142,14 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
 router.delete('/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
+    const restaurantId = req.restaurantId;
     const { supabaseAdmin } = req.app.locals;
 
     const { error } = await supabaseAdmin
       .from('products')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('restaurant_id', restaurantId); // Asegurar que solo elimine productos de su restaurante
 
     if (error) throw error;
 

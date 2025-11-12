@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS super_admins (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Deshabilitar RLS en super_admins (el backend usa Service Role Key que bypassa RLS)
+ALTER TABLE super_admins DISABLE ROW LEVEL SECURITY;
+
 -- ============================================
 -- TABLA: restaurants (Restaurantes/Clientes)
 -- ============================================
@@ -32,6 +35,9 @@ CREATE TABLE IF NOT EXISTS restaurants (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Deshabilitar RLS en restaurants (el backend usa Service Role Key que bypassa RLS)
+ALTER TABLE restaurants DISABLE ROW LEVEL SECURITY;
 
 -- ============================================
 -- MODIFICAR TABLA: admins (agregar restaurant_id)
@@ -51,6 +57,10 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_admins_restaurant_id ON admins(restaurant_id);
 CREATE INDEX IF NOT EXISTS idx_restaurants_created_by ON restaurants(created_by);
 CREATE INDEX IF NOT EXISTS idx_restaurants_active ON restaurants(active);
+
+-- Deshabilitar RLS en admins para permitir que el backend (Service Role Key) pueda crear/actualizar admins
+-- NOTA: El backend maneja la seguridad mediante middleware, por lo que RLS no es necesario aquí
+ALTER TABLE admins DISABLE ROW LEVEL SECURITY;
 
 -- ============================================
 -- MODIFICAR OTRAS TABLAS PARA MULTI-TENANT

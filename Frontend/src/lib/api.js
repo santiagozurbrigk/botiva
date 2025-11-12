@@ -571,6 +571,17 @@ export const api = {
     return data;
   },
 
+  getRestaurantDetails: async (token, id) => {
+    const response = await fetch(`${API_URL}/api/super-admin/restaurants/${id}/details`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al obtener detalles del restaurante');
+    }
+    return data;
+  },
+
   createRestaurant: async (token, restaurantData) => {
     const response = await fetch(`${API_URL}/api/super-admin/restaurants`, {
       method: 'POST',
@@ -582,7 +593,11 @@ export const api = {
     });
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.error || 'Error al crear restaurante');
+      const error = new Error(data.error || 'Error al crear restaurante');
+      if (data.details) {
+        error.details = data.details;
+      }
+      throw error;
     }
     return data;
   },

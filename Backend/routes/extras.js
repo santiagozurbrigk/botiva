@@ -8,8 +8,16 @@ router.get('/', async (req, res) => {
   try {
     const { supabaseAdmin } = req.app.locals;
     const { category, active } = req.query;
+    const restaurantId = req.restaurantId; // Obtener restaurant_id si hay admin autenticado
 
-    let query = supabaseAdmin.from('extras').select('*').order('created_at', { ascending: false });
+    let query = supabaseAdmin.from('extras').select('*');
+    
+    // Filtrar por restaurant_id si está disponible
+    if (restaurantId) {
+      query = query.eq('restaurant_id', restaurantId);
+    }
+    
+    query = query.order('created_at', { ascending: false });
 
     if (category) {
       query = query.eq('category', category);
@@ -59,6 +67,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', authenticateAdmin, async (req, res) => {
   try {
     const { name, description, price, category, image_url, active } = req.body;
+    const restaurantId = req.restaurantId;
 
     if (!name || price === undefined || !category) {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
@@ -75,6 +84,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
         category,
         image_url,
         active: active !== undefined ? active : true,
+        restaurant_id: restaurantId, // Asociar extra al restaurante
       })
       .select()
       .single();
