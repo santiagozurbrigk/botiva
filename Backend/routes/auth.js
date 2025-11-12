@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateAdmin, authenticateRider, authenticateWaiter } from '../middleware/auth.js';
+import { authenticateAdmin, authenticateRider, authenticateWaiter, authenticateSuperAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -118,6 +118,47 @@ router.post('/login-waiter', async (req, res) => {
         email: data.user.email,
         role: 'waiter',
         waiter,
+      },
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Error al iniciar sesión' });
+  }
+});
+
+// Login Super Admin
+router.post('/login-super-admin', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const { supabaseAdmin } = req.app.locals;
+
+    const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+
+    // Verificar que es super admin
+    const { data: superAdmin, error: superAdminError } = await supabaseAdmin
+      .from('super_admins')
+      .select('*')
+      .eq('auth_user_id', data.user.id)
+      .single();
+
+    if (superAdminError || !superAdmin) {
+      return res.status(403).json({ error: 'No tienes permisos de super administrador' });
+    }
+
+    res.json({
+      token: data.session.access_token,
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        role: 'super_admin',
+        superAdmin,
       },
     });
   } catch (error) {

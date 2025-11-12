@@ -29,6 +29,19 @@ export const api = {
     return response.json();
   },
 
+  loginSuperAdmin: async (email, password) => {
+    const response = await fetch(`${API_URL}/api/auth/login-super-admin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al iniciar sesión');
+    }
+    return data;
+  },
+
   // Products
   getProducts: async (token) => {
     const response = await fetch(`${API_URL}/api/products`, {
@@ -533,6 +546,100 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     });
     return response.json();
+  },
+
+  // Super Admin
+  getRestaurants: async (token) => {
+    const response = await fetch(`${API_URL}/api/super-admin/restaurants`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al obtener restaurantes');
+    }
+    return data;
+  },
+
+  getRestaurant: async (token, id) => {
+    const response = await fetch(`${API_URL}/api/super-admin/restaurants/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al obtener restaurante');
+    }
+    return data;
+  },
+
+  createRestaurant: async (token, restaurantData) => {
+    const response = await fetch(`${API_URL}/api/super-admin/restaurants`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(restaurantData),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al crear restaurante');
+    }
+    return data;
+  },
+
+  updateRestaurant: async (token, id, restaurantData) => {
+    const response = await fetch(`${API_URL}/api/super-admin/restaurants/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(restaurantData),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al actualizar restaurante');
+    }
+    return data;
+  },
+
+  deleteRestaurant: async (token, id) => {
+    const response = await fetch(`${API_URL}/api/super-admin/restaurants/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al eliminar restaurante');
+    }
+    return data;
+  },
+
+  createRestaurantAdmin: async (token, restaurantId, adminData) => {
+    const response = await fetch(`${API_URL}/api/super-admin/restaurants/${restaurantId}/admin`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(adminData),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al crear cuenta de administrador');
+    }
+    return data;
+  },
+
+  getRestaurantAdmins: async (token, restaurantId) => {
+    const response = await fetch(`${API_URL}/api/super-admin/restaurants/${restaurantId}/admins`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al obtener administradores');
+    }
+    return data;
   },
 };
 

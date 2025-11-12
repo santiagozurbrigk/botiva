@@ -119,3 +119,39 @@ export const authenticateWaiter = async (req, res, next) => {
   }
 };
 
+export const authenticateSuperAdmin = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No autorizado' });
+    }
+
+    const token = authHeader.substring(7);
+    const { supabaseAdmin } = req.app.locals;
+
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+    if (error || !user) {
+      return res.status(401).json({ error: 'Token inválido' });
+    }
+
+    // Verificar si es super admin
+    const { data: superAdmin, error: superAdminError } = await supabaseAdmin
+      .from('super_admins')
+      .select('*')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    if (superAdminError || !superAdmin) {
+      return res.status(403).json({ error: 'Acceso denegado. Se requieren permisos de super administrador' });
+    }
+
+    req.user = { ...user, superAdmin };
+    next();
+  } catch (error) {
+    console.error('Auth error:', error);
+    res.status(500).json({ error: 'Error de autenticación' });
+  }
+};
+

@@ -13,6 +13,7 @@ import stockRoutes from './routes/stock.js';
 import authRoutes from './routes/auth.js';
 import financesRoutes from './routes/finances.js';
 import deliveryConfigRoutes from './routes/delivery-config.js';
+import superAdminRoutes from './routes/super-admin.js';
 
 dotenv.config();
 
@@ -114,6 +115,7 @@ app.use('/api/kitchen', kitchenRoutes);
 app.use('/api/finances', financesRoutes);
 app.use('/api/delivery-config', deliveryConfigRoutes);
 app.use('/api/stock', stockRoutes);
+app.use('/api/super-admin', superAdminRoutes);
 console.log('✅ Rutas configuradas');
 
 // Health check

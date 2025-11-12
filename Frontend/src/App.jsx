@@ -18,6 +18,9 @@ import RiderDashboard from './pages/rider/Dashboard';
 import WaiterDashboard from './pages/waiter/Dashboard';
 import Kitchen from './pages/kitchen/Kitchen';
 import StockRequest from './pages/stock/StockRequest';
+import SuperAdminLayout from './components/super-admin/SuperAdminLayout';
+import SuperAdminLogin from './pages/super-admin/Login';
+import SuperAdminDashboard from './pages/super-admin/Dashboard';
 
 function PrivateRoute({ children, requiredRole }) {
   const { user, loading } = useAuth();
@@ -97,6 +100,21 @@ function AppRoutes() {
       {/* Panel de Cocina - Sin autenticación (público) */}
       <Route path="/kitchen" element={<Kitchen />} />
       <Route path="/stock" element={<StockRequest />} />
+
+      {/* Super Admin Routes */}
+      <Route path="/super-admin/login" element={<SuperAdminLogin />} />
+      <Route
+        path="/super-admin/*"
+        element={
+          <PrivateRoute requiredRole="super_admin">
+            <SuperAdminLayout>
+              <Routes>
+                <Route index element={<SuperAdminDashboard />} />
+              </Routes>
+            </SuperAdminLayout>
+          </PrivateRoute>
+        }
+      />
 
       <Route path="/" element={<Navigate to="/login" replace />} />
     </Routes>
