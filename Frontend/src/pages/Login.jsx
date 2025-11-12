@@ -55,8 +55,8 @@ export default function Login() {
           <div className="flex justify-center mb-4">
             <img src="/logo.png" alt="Botiva" className="h-20 w-auto" />
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Botiva | Software de Gestión gastronómica
+          <h2 className="mt-6 text-center font-inter font-bold text-3xl font-extrabold text-gray-900">
+            Botiva
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Iniciar sesión

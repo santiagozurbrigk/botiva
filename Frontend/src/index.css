@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+/* Configurar fuente Inter como fuente principal */
+* {
+  font-family: "Inter", sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+}
+
 /* Ocultar scrollbar pero mantener funcionalidad de scroll */
 .hide-scrollbar {
   -ms-overflow-style: none;  /* IE and Edge */
