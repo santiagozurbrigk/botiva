@@ -473,6 +473,18 @@ export const api = {
     return data;
   },
 
+  getStatistics: async (token, params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await fetch(`${API_URL}/api/finances/statistics?${queryString}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al obtener estadísticas');
+    }
+    return data;
+  },
+
   getPayments: async (token) => {
     const response = await fetch(`${API_URL}/api/finances/payments`, {
       headers: { Authorization: `Bearer ${token}` },

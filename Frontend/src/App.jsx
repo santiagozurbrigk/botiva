@@ -13,6 +13,7 @@ import Riders from './pages/admin/Riders';
 import Waiters from './pages/admin/Waiters';
 import DeliveryConfig from './pages/admin/DeliveryConfig';
 import Stock from './pages/admin/Stock';
+import Statistics from './pages/admin/Statistics';
 import RiderDashboard from './pages/rider/Dashboard';
 import WaiterDashboard from './pages/waiter/Dashboard';
 import Kitchen from './pages/kitchen/Kitchen';
@@ -60,6 +61,7 @@ function AppRoutes() {
                 <Route path="waiters" element={<Waiters />} />
                 <Route path="delivery-config" element={<DeliveryConfig />} />
                 <Route path="stock" element={<Stock />} />
+                <Route path="statistics" element={<Statistics />} />
               </Routes>
             </AdminLayout>
           </PrivateRoute>
