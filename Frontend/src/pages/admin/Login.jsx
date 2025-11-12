@@ -74,6 +74,9 @@ const Login = () => {
         <div className="bg-white rounded-lg shadow-lg p-8 border" style={{ borderColor: '#b08968' }}>
           {/* Logo */}
           <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <img src="/logo.png" alt="Ala Burguer" className="h-20 w-auto" />
+            </div>
             <h1 className="text-3xl font-bold mb-2" style={{ color: '#7f5539' }}>Ala-Burguer</h1>
             <p className="text-lg" style={{ color: '#b08968' }}>Panel de Administración</p>
           </div>
