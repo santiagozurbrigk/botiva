@@ -7,30 +7,46 @@ const router = express.Router();
 router.get('/', authenticateAdmin, async (req, res) => {
   try {
     const { supabaseAdmin } = req.app.locals;
+    const restaurantId = req.restaurantId;
 
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('delivery_config')
       .select('*')
-      .eq('is_active', true)
-      .single();
+      .eq('is_active', true);
 
-    if (error) throw error;
+    // Si la tabla tiene restaurant_id, filtrar por él
+    // Si no, usar la primera configuración activa (compatibilidad hacia atrás)
+    if (restaurantId) {
+      // Intentar filtrar por restaurant_id si existe la columna
+      query = query.eq('restaurant_id', restaurantId);
+    }
 
-    if (!data) {
-      // Si no hay configuración activa, crear una por defecto
+    const { data, error } = await query.single();
+
+    if (error && error.code === 'PGRST116') {
+      // No hay configuración activa, crear una por defecto
+      const configData = {
+        delivery_time_minutes: 30,
+        delivery_cost: 0.00,
+        is_active: true
+      };
+      
+      // Agregar restaurant_id si existe la columna
+      if (restaurantId) {
+        configData.restaurant_id = restaurantId;
+      }
+
       const { data: newConfig, error: insertError } = await supabaseAdmin
         .from('delivery_config')
-        .insert({
-          delivery_time_minutes: 30,
-          delivery_cost: 0.00,
-          is_active: true
-        })
+        .insert(configData)
         .select()
         .single();
 
       if (insertError) throw insertError;
       return res.json(newConfig);
     }
+
+    if (error) throw error;
 
     res.json(data);
   } catch (error) {
@@ -44,6 +60,7 @@ router.put('/', authenticateAdmin, async (req, res) => {
   try {
     const { delivery_time_minutes, delivery_cost } = req.body;
     const { supabaseAdmin } = req.app.locals;
+    const restaurantId = req.restaurantId;
 
     // Validar datos de entrada
     if (delivery_time_minutes === undefined || delivery_cost === undefined) {
@@ -58,20 +75,32 @@ router.put('/', authenticateAdmin, async (req, res) => {
       });
     }
 
-    // Desactivar configuración actual
-    await supabaseAdmin
+    // Desactivar configuración actual del restaurante
+    let deactivateQuery = supabaseAdmin
       .from('delivery_config')
       .update({ is_active: false })
       .eq('is_active', true);
 
+    if (restaurantId) {
+      deactivateQuery = deactivateQuery.eq('restaurant_id', restaurantId);
+    }
+
+    await deactivateQuery;
+
     // Crear nueva configuración activa
+    const configData = {
+      delivery_time_minutes: parseInt(delivery_time_minutes),
+      delivery_cost: parseFloat(delivery_cost),
+      is_active: true
+    };
+
+    if (restaurantId) {
+      configData.restaurant_id = restaurantId;
+    }
+
     const { data, error } = await supabaseAdmin
       .from('delivery_config')
-      .insert({
-        delivery_time_minutes: parseInt(delivery_time_minutes),
-        delivery_cost: parseFloat(delivery_cost),
-        is_active: true
-      })
+      .insert(configData)
       .select()
       .single();
 
@@ -88,16 +117,23 @@ router.put('/', authenticateAdmin, async (req, res) => {
 router.get('/history', authenticateAdmin, async (req, res) => {
   try {
     const { supabaseAdmin } = req.app.locals;
+    const restaurantId = req.restaurantId;
 
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('delivery_config')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(20);
+      .select('*');
+
+    if (restaurantId) {
+      query = query.eq('restaurant_id', restaurantId);
+    }
+
+    query = query.order('created_at', { ascending: false }).limit(20);
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
-    res.json(data);
+    res.json(data || []);
   } catch (error) {
     console.error('Error fetching delivery config history:', error);
     res.status(500).json({ error: 'Error al obtener historial de configuración' });

@@ -4,6 +4,7 @@ import { authenticateAdmin } from '../middleware/auth.js';
 const router = express.Router();
 
 // GET /api/products - Listar productos
+// Nota: Esta ruta puede ser pública (para cocina) o con autenticación (para admin)
 router.get('/', async (req, res) => {
   try {
     const { supabaseAdmin } = req.app.locals;
@@ -17,6 +18,9 @@ router.get('/', async (req, res) => {
     // Filtrar por restaurant_id si está disponible (admin autenticado)
     if (restaurantId) {
       query = query.eq('restaurant_id', restaurantId);
+    } else {
+      // Si no hay restaurantId, solo mostrar productos activos (para acceso público como cocina)
+      query = query.eq('active', true);
     }
     
     query = query.order('created_at', { ascending: false });

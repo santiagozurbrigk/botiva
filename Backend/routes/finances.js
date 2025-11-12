@@ -8,10 +8,12 @@ router.get('/summary', authenticateAdmin, async (req, res) => {
   try {
     const { supabaseAdmin } = req.app.locals;
     const { date_from, date_to } = req.query;
+    const restaurantId = req.restaurantId; // Obtener restaurant_id del middleware
 
     let query = supabaseAdmin
       .from('orders')
-      .select('total_amount, status, payment_status, created_at');
+      .select('total_amount, status, payment_status, created_at')
+      .eq('restaurant_id', restaurantId); // Filtrar por restaurant_id
 
     if (date_from) {
       query = query.gte('created_at', date_from);
@@ -65,15 +67,36 @@ router.get('/summary', authenticateAdmin, async (req, res) => {
 router.get('/payments', authenticateAdmin, async (req, res) => {
   try {
     const { supabaseAdmin } = req.app.locals;
+    const restaurantId = req.restaurantId;
 
-    const { data, error } = await supabaseAdmin
+    // Obtener pagos a través de orders (ya que payments puede no tener restaurant_id directamente)
+    const { data: orders, error: ordersError } = await supabaseAdmin
+      .from('orders')
+      .select('id')
+      .eq('restaurant_id', restaurantId);
+
+    if (ordersError) throw ordersError;
+
+    const orderIds = orders?.map(o => o.id) || [];
+
+    let query = supabaseAdmin
       .from('payments')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*');
+
+    // Si hay orders, filtrar por order_id, si no, retornar array vacío
+    if (orderIds.length > 0) {
+      query = query.in('order_id', orderIds);
+    } else {
+      return res.json([]);
+    }
+
+    query = query.order('created_at', { ascending: false });
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
-    res.json(data);
+    res.json(data || []);
   } catch (error) {
     console.error('Error fetching payments:', error);
     res.status(500).json({ error: 'Error al obtener pagos' });
