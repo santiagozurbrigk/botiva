@@ -74,6 +74,28 @@ router.post('/', async (req, res) => {
     // Si no se pudo obtener restaurant_id, intentar desde el body (para n8n)
     if (!restaurantId && req.body.restaurant_id) {
       restaurantId = req.body.restaurant_id;
+      
+      // Validar que el restaurante existe y está activo
+      const { data: restaurant, error: restaurantError } = await supabaseAdmin
+        .from('restaurants')
+        .select('id, active')
+        .eq('id', restaurantId)
+        .single();
+      
+      if (restaurantError || !restaurant) {
+        return res.status(400).json({ error: 'Restaurante no encontrado' });
+      }
+      
+      if (!restaurant.active) {
+        return res.status(400).json({ error: 'El restaurante está inactivo' });
+      }
+    }
+    
+    // Validar que se obtuvo restaurant_id (requerido para multi-tenant)
+    if (!restaurantId) {
+      return res.status(400).json({ 
+        error: 'restaurant_id es requerido. No se pudo determinar el restaurante del pedido.' 
+      });
     }
 
     // Crear el pedido

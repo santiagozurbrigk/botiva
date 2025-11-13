@@ -3,19 +3,29 @@ import { authenticateAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// POST /api/stock/requests - Crear pedido de reposición (sin autenticación para facilitar acceso desde la cocina)
+// POST /api/stock/requests - Crear pedido de reposición
+// Nota: Puede ser sin autenticación (para cocina) o con autenticación (para admin)
+// Si viene con autenticación, se usa req.restaurantId, si no, se requiere restaurant_id en el body
 router.post('/requests', async (req, res) => {
   try {
-    const { section, requester_name, missing_items, additional_notes } = req.body;
+    const { section, requester_name, missing_items, additional_notes, restaurant_id } = req.body;
     const { supabaseAdmin } = req.app.locals;
 
     if (!section || !missing_items) {
       return res.status(400).json({ error: 'La sección y los insumos faltantes son obligatorios' });
     }
 
+    // Obtener restaurant_id: del middleware si hay admin autenticado, o del body
+    const restaurantId = req.restaurantId || restaurant_id;
+    
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'restaurant_id es requerido' });
+    }
+
     const payload = {
       section: section.trim(),
       missing_items: missing_items.trim(),
+      restaurant_id: restaurantId, // Asociar solicitud al restaurante
     };
 
     if (requester_name) {
@@ -46,10 +56,12 @@ router.get('/requests', authenticateAdmin, async (req, res) => {
   try {
     const { supabaseAdmin } = req.app.locals;
     const { status } = req.query;
+    const restaurantId = req.restaurantId; // Obtener restaurant_id del middleware
 
     let query = supabaseAdmin
       .from('stock_requests')
       .select('*')
+      .eq('restaurant_id', restaurantId) // Filtrar por restaurant_id
       .order('created_at', { ascending: false });
 
     if (status) {
@@ -73,6 +85,7 @@ router.patch('/requests/:id/status', authenticateAdmin, async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     const { supabaseAdmin } = req.app.locals;
+    const restaurantId = req.restaurantId; // Obtener restaurant_id del middleware
 
     if (!status) {
       return res.status(400).json({ error: 'El estado es obligatorio' });
@@ -87,6 +100,7 @@ router.patch('/requests/:id/status', authenticateAdmin, async (req, res) => {
       .from('stock_requests')
       .update({ status })
       .eq('id', id)
+      .eq('restaurant_id', restaurantId) // Asegurar que solo actualice solicitudes de su restaurante
       .select()
       .single();
 
