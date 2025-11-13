@@ -52,6 +52,22 @@ export default function RestaurantDetails() {
     }).format(amount);
   };
 
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      alert('UUID copiado al portapapeles');
+    }).catch(err => {
+      console.error('Error al copiar:', err);
+      // Fallback para navegadores que no soportan clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      alert('UUID copiado al portapapeles');
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -116,6 +132,22 @@ export default function RestaurantDetails() {
       <div className="bg-white shadow rounded-lg p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Información del Restaurante</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Restaurant ID (UUID)</label>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm text-gray-900 font-mono break-all">
+                {restaurant.id}
+              </code>
+              <button
+                onClick={() => copyToClipboard(restaurant.id)}
+                className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                title="Copiar UUID"
+              >
+                📋 Copiar
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-gray-500">Usa este ID para configurar n8n y vincular pedidos a este restaurante</p>
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Email</label>
             <p className="mt-1 text-sm text-gray-900">{restaurant.email}</p>
