@@ -47,6 +47,11 @@ export const authenticateAdmin = async (req, res, next) => {
 
     req.user = { ...user, admin };
     req.restaurantId = admin.restaurant_id; // Agregar restaurant_id al request para facilitar el acceso
+    
+    console.log('✅ [AUTH MIDDLEWARE] Admin autenticado:', admin.email);
+    console.log('✅ [AUTH MIDDLEWARE] restaurant_id asignado:', admin.restaurant_id);
+    console.log('✅ [AUTH MIDDLEWARE] req.restaurantId establecido:', req.restaurantId);
+    
     next();
   } catch (error) {
     console.error('Auth error:', error);

@@ -5,7 +5,23 @@ const router = express.Router();
 
 // GET /api/products - Listar productos
 // Nota: Esta ruta puede ser pública (para cocina) o con autenticación (para admin)
-router.get('/', async (req, res) => {
+// Si hay token, usar authenticateAdmin para establecer req.restaurantId
+router.get('/', async (req, res, next) => {
+  // Si hay token de autorización, usar el middleware de autenticación primero
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    // Llamar al middleware de autenticación para establecer req.restaurantId
+    return authenticateAdmin(req, res, () => {
+      // Continuar con el handler después de la autenticación
+      handleGetProducts(req, res);
+    });
+  } else {
+    // Sin token, continuar sin autenticación (acceso público para cocina)
+    handleGetProducts(req, res);
+  }
+});
+
+async function handleGetProducts(req, res) {
   try {
     const { supabaseAdmin } = req.app.locals;
     const { category, active } = req.query;
@@ -13,13 +29,19 @@ router.get('/', async (req, res) => {
     // Si hay un admin autenticado, filtrar por restaurant_id
     const restaurantId = req.restaurantId;
 
+    console.log('🔵 [PRODUCTS GET] restaurantId del request:', restaurantId);
+    console.log('🔵 [PRODUCTS GET] req.restaurantId:', req.restaurantId);
+    console.log('🔵 [PRODUCTS GET] req.user:', req.user ? 'existe' : 'no existe');
+
     let query = supabaseAdmin.from('products').select('*');
     
     // Filtrar por restaurant_id si está disponible (admin autenticado)
     if (restaurantId) {
+      console.log('🔵 [PRODUCTS GET] Filtrando por restaurant_id:', restaurantId);
       query = query.eq('restaurant_id', restaurantId);
     } else {
       // Si no hay restaurantId, solo mostrar productos activos (para acceso público como cocina)
+      console.log('🔵 [PRODUCTS GET] Sin restaurantId, filtrando solo por active=true');
       query = query.eq('active', true);
     }
     
@@ -37,12 +59,21 @@ router.get('/', async (req, res) => {
 
     if (error) throw error;
 
+    console.log('🔵 [PRODUCTS GET] Productos encontrados:', data?.length || 0);
+    if (data && data.length > 0) {
+      console.log('🔵 [PRODUCTS GET] Primeros productos:', data.slice(0, 3).map(p => ({
+        id: p.id,
+        name: p.name,
+        restaurant_id: p.restaurant_id
+      })));
+    }
+
     res.json(data);
   } catch (error) {
     console.error('Error fetching products:', error);
     res.status(500).json({ error: 'Error al obtener productos' });
   }
-});
+}
 
 // GET /api/products/:id - Obtener producto por ID
 router.get('/:id', async (req, res) => {
@@ -114,28 +145,36 @@ router.post('/', authenticateAdmin, async (req, res) => {
       return res.status(403).json({ error: 'El restaurante está inactivo' });
     }
 
-    console.log('Creando producto para restaurante:', restaurantId);
+    console.log('🔵 [PRODUCTS] Creando producto para restaurante:', restaurantId);
+    console.log('🔵 [PRODUCTS] Datos del producto:', { name, price, category, restaurant_id: restaurantId });
+
+    const productData = {
+      name,
+      description,
+      price,
+      category,
+      image_url,
+      active: active !== undefined ? active : true,
+      restaurant_id: restaurantId, // Asociar producto al restaurante
+    };
+
+    console.log('🔵 [PRODUCTS] Datos a insertar:', JSON.stringify(productData, null, 2));
 
     const { data, error } = await supabaseAdmin
       .from('products')
-      .insert({
-        name,
-        description,
-        price,
-        category,
-        image_url,
-        active: active !== undefined ? active : true,
-        restaurant_id: restaurantId, // Asociar producto al restaurante
-      })
+      .insert(productData)
       .select()
       .single();
 
     if (error) {
-      console.error('Error al insertar producto:', error);
+      console.error('❌ [PRODUCTS] Error al insertar producto:', error);
+      console.error('❌ [PRODUCTS] Detalles del error:', JSON.stringify(error, null, 2));
       throw error;
     }
 
-    console.log('Producto creado exitosamente:', data.id, 'para restaurante:', restaurantId);
+    console.log('✅ [PRODUCTS] Producto creado exitosamente:', data.id);
+    console.log('✅ [PRODUCTS] Producto creado con restaurant_id:', data.restaurant_id);
+    console.log('✅ [PRODUCTS] Datos completos del producto creado:', JSON.stringify(data, null, 2));
     res.status(201).json(data);
   } catch (error) {
     console.error('Error creating product:', error);
