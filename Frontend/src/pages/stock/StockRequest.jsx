@@ -70,8 +70,8 @@ export default function StockRequest() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-3xl bg-white rounded-2xl shadow-xl p-8">
+    <div className="min-h-screen bg-app-gradient flex items-center justify-center px-4 py-10 animate-page">
+      <div className="w-full max-w-3xl bg-white/95 rounded-2xl shadow-xl p-8 card-animated backdrop-blur">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Pedido de Stock</h1>
           <p className="mt-2 text-gray-600">

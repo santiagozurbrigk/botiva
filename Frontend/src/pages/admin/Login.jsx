@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
   const { isAuthenticated, actions } = useApp();
+  const { playSplash } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -14,10 +16,14 @@ const Login = () => {
 
   // Redirigir si ya está autenticado
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/admin/dashboard');
-    }
-  }, [isAuthenticated, navigate]);
+    const handleRedirect = async () => {
+      if (isAuthenticated) {
+        await playSplash();
+        navigate('/admin/dashboard');
+      }
+    };
+    handleRedirect();
+  }, [isAuthenticated, navigate, playSplash]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -69,16 +75,15 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#ede0d4' }}>
-      <div className="max-w-md w-full mx-4">
-        <div className="bg-white rounded-lg shadow-lg p-8 border" style={{ borderColor: '#b08968' }}>
+    <div className="min-h-screen flex items-center justify-center bg-app-gradient px-4 animate-page">
+      <div className="max-w-md w-full mx-4 card-animated bg-white/95 rounded-3xl shadow-lg p-8 backdrop-blur">
           {/* Logo */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-8 space-y-2">
             <div className="flex justify-center mb-4">
-              <img src="/logo.png" alt="Ala Burguer" className="h-20 w-auto" />
+              <img src="/logo.png" alt="Ala Burguer" className="h-20 w-auto drop-shadow-lg" />
             </div>
-            <h1 className="text-3xl font-bold mb-2" style={{ color: '#7f5539' }}>Ala-Burguer</h1>
-            <p className="text-lg" style={{ color: '#b08968' }}>Panel de Administración</p>
+            <h1 className="text-3xl font-bold mb-1 text-gray-900">Ala-Burguer</h1>
+            <p className="text-sm text-gray-500">Panel de Administración</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -89,7 +94,7 @@ const Login = () => {
             )}
             
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: '#7f5539' }}>
+              <label className="block text-sm font-medium mb-2 text-gray-700">
                 Email
               </label>
               <input
@@ -97,12 +102,7 @@ const Login = () => {
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2"
-                style={{ 
-                  backgroundColor: '#e6ccb2',
-                  borderColor: errors.email ? '#dc2626' : '#b08968',
-                  color: '#7f5539'
-                }}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="admin@alaburguer.com"
               />
               {errors.email && (
@@ -111,7 +111,7 @@ const Login = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: '#7f5539' }}>
+              <label className="block text-sm font-medium mb-2 text-gray-700">
                 Contraseña
               </label>
               <input
@@ -119,12 +119,7 @@ const Login = () => {
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2"
-                style={{ 
-                  backgroundColor: '#e6ccb2',
-                  borderColor: errors.password ? '#dc2626' : '#b08968',
-                  color: '#7f5539'
-                }}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="••••••••"
               />
               {errors.password && (
@@ -135,12 +130,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center"
-              style={{ 
-                backgroundColor: isLoading ? '#b08968' : '#ddb892', 
-                color: '#7f5539',
-                border: '2px solid #b08968'
-              }}
+              className="btn-primary w-full"
             >
               {isLoading ? (
                 <>
@@ -157,10 +147,10 @@ const Login = () => {
           </form>
 
           {/* Demo Credentials */}
-          <div className="mt-6 p-4 rounded-lg" style={{ backgroundColor: '#e6ccb2' }}>
-            <p className="text-sm font-medium mb-2" style={{ color: '#7f5539' }}>Credenciales de prueba:</p>
-            <p className="text-sm" style={{ color: '#b08968' }}>Email: admin@ala-burguer.com</p>
-            <p className="text-sm" style={{ color: '#b08968' }}>Contraseña: admin123</p>
+          <div className="mt-6 p-4 rounded-xl bg-primary-light/70">
+            <p className="text-sm font-medium mb-2 text-gray-700">Credenciales de prueba:</p>
+            <p className="text-sm text-gray-600">Email: admin@ala-burguer.com</p>
+            <p className="text-sm text-gray-600">Contraseña: admin123</p>
           </div>
         </div>
       </div>

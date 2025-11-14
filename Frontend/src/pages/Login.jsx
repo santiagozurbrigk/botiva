@@ -9,7 +9,7 @@ export default function Login() {
   const [userType, setUserType] = useState('admin'); // admin, rider o waiter
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, playSplash } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -39,6 +39,7 @@ export default function Login() {
         setError(data.error);
       } else {
         login(data.user, data.token);
+        await playSplash();
         navigate(redirectPath, { replace: true });
       }
     } catch (err) {
@@ -49,18 +50,14 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <div className="flex justify-center mb-4">
-            <img src="/logo.png" alt="Botiva" className="h-40 w-auto" />
+    <div className="min-h-screen flex items-center justify-center bg-app-gradient px-4 animate-page">
+      <div className="max-w-md w-full space-y-8 card-animated bg-white/90 rounded-3xl shadow-lg p-8 backdrop-blur">
+        <div className="text-center space-y-3">
+          <div className="flex justify-center">
+            <img src="/logo.png" alt="Botiva" className="h-28 w-auto drop-shadow-lg" />
           </div>
-          <h2 className="mt-6 text-center font-inter font-bold text-3xl font-extrabold text-gray-900">
-            Botiva
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Iniciar sesión
-          </p>
+          <h2 className="text-3xl font-extrabold text-gray-900">Botiva</h2>
+          <p className="text-sm text-gray-500">Iniciar sesión</p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
@@ -73,7 +70,7 @@ export default function Login() {
                 name="userType"
                 value={userType}
                 onChange={(e) => setUserType(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               >
                 <option value="admin">Administrador</option>
                 <option value="rider">Repartidor</option>
@@ -91,7 +88,7 @@ export default function Login() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="tu@email.com"
               />
             </div>
@@ -106,24 +103,20 @@ export default function Login() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="••••••••"
               />
             </div>
           </div>
 
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
+            <div className="rounded-xl bg-red-50 p-4 border border-red-100">
               <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
 
           <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-            >
+            <button type="submit" disabled={loading} className="btn-primary w-full">
               {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
             </button>
           </div>

@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+:root {
+  --color-primary: #009fee;
+  --color-primary-dark: #007ac2;
+  --color-primary-light: #e0f5ff;
+  --color-primary-tint: #bfe9ff;
+  --color-dark: #04172a;
+  --color-muted: #5f7084;
+  --card-shadow: 0 20px 45px rgba(4, 23, 42, 0.08);
+}
+
 /* Configurar fuente Inter como fuente principal */
 * {
   font-family: "Inter", sans-serif;
@@ -11,6 +21,186 @@ body {
   font-family: "Inter", sans-serif;
   font-optical-sizing: auto;
   font-style: normal;
+  color: var(--color-dark);
+  background: radial-gradient(circle at top, rgba(0, 159, 238, 0.08), transparent 60%) #f4f7fb;
+  min-height: 100vh;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease,
+    box-shadow 0.25s ease, transform 0.2s ease;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 0.85rem;
+  padding: 0.85rem 1.5rem;
+  font-weight: 600;
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 10px 25px rgba(0, 159, 238, 0.25);
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px rgba(0, 159, 238, 0.3);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.animate-page {
+  animation: pageFade 0.55s ease both;
+}
+
+@keyframes pageFade {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card-animated {
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+  box-shadow: 0 12px 30px rgba(4, 23, 42, 0.05);
+}
+
+.card-animated:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 22px 50px rgba(4, 23, 42, 0.12);
+}
+
+.bg-app-gradient {
+  background: linear-gradient(135deg, rgba(0, 159, 238, 0.18), rgba(0, 159, 238, 0.05));
+}
+
+/* Overrides para colores tailwind existentes */
+.bg-indigo-600,
+.hover\:bg-indigo-600:hover {
+  background-color: var(--color-primary) !important;
+}
+
+.bg-indigo-700,
+.hover\:bg-indigo-700:hover {
+  background-color: var(--color-primary-dark) !important;
+}
+
+.text-indigo-600,
+.hover\:text-indigo-600:hover {
+  color: var(--color-primary) !important;
+}
+
+.text-indigo-900 {
+  color: var(--color-dark) !important;
+}
+
+.bg-indigo-50 {
+  background-color: var(--color-primary-light) !important;
+}
+
+.border-indigo-200 {
+  border-color: rgba(0, 159, 238, 0.3) !important;
+}
+
+.focus\:ring-indigo-500:focus {
+  box-shadow: 0 0 0 3px rgba(0, 159, 238, 0.35) !important;
+  border-color: var(--color-primary) !important;
+}
+
+.focus\:border-indigo-500:focus {
+  border-color: var(--color-primary) !important;
+}
+
+.text-indigo-500 {
+  color: var(--color-primary) !important;
+}
+
+.ring-indigo-500 {
+  --tw-ring-color: rgba(0, 159, 238, 0.35) !important;
+}
+
+/* Splash Screen */
+.splash-overlay {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.splash-overlay--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.splash-overlay__background {
+  position: absolute;
+  inset: 0;
+  background: var(--color-primary);
+  animation: splashFill 2s ease forwards;
+}
+
+.splash-overlay__logo {
+  width: 150px;
+  max-width: 60vw;
+  position: relative;
+  z-index: 2;
+  animation: splashLogo 2s ease forwards;
+}
+
+@keyframes splashFill {
+  0% {
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  25% {
+    transform: scaleY(1);
+  }
+  75% {
+    transform: scaleY(1);
+  }
+  100% {
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+}
+
+@keyframes splashLogo {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
 }
 
 /* Ocultar scrollbar pero mantener funcionalidad de scroll */
