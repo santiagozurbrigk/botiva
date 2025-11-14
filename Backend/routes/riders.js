@@ -9,17 +9,23 @@ router.get('/', authenticateAdmin, async (req, res) => {
     const { supabaseAdmin } = req.app.locals;
     const restaurantId = req.restaurantId;
 
+    console.log('🔵 [RIDERS][GET] Listando riders para restaurante:', restaurantId);
+
     const { data, error } = await supabaseAdmin
       .from('riders')
       .select('*')
       .eq('restaurant_id', restaurantId) // Filtrar por restaurant_id
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ [RIDERS][GET] Error en Supabase:', error);
+      throw error;
+    }
 
+    console.log('✅ [RIDERS][GET] Riders encontrados:', data?.length || 0);
     res.json(data);
   } catch (error) {
-    console.error('Error fetching riders:', error);
+    console.error('❌ [RIDERS][GET] Error fetching riders:', error);
     res.status(500).json({ error: 'Error al obtener repartidores' });
   }
 });
@@ -54,7 +60,10 @@ router.post('/', authenticateAdmin, async (req, res) => {
   try {
     const { name, phone, email, password } = req.body;
 
+    console.log('🔵 [RIDERS][POST] Intentando crear rider', { name, email, phone });
+
     if (!name || !phone || !email || !password) {
+      console.warn('⚠️ [RIDERS][POST] Campos faltantes', { name, phone, email, hasPassword: !!password });
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
 
@@ -67,10 +76,15 @@ router.post('/', authenticateAdmin, async (req, res) => {
       email_confirm: true,
     });
 
-    if (authError) throw authError;
+    if (authError) {
+      console.error('❌ [RIDERS][POST] Error creando usuario en Auth:', authError);
+      throw authError;
+    }
 
     // Crear perfil de rider
     const restaurantId = req.restaurantId;
+    console.log('🔵 [RIDERS][POST] Asociando rider al restaurante:', restaurantId);
+
     const { data: rider, error: riderError } = await supabaseAdmin
       .from('riders')
       .insert({
@@ -84,11 +98,20 @@ router.post('/', authenticateAdmin, async (req, res) => {
       .select()
       .single();
 
-    if (riderError) throw riderError;
+    if (riderError) {
+      console.error('❌ [RIDERS][POST] Error insertando rider:', riderError);
+      // Intentar limpiar usuario de Auth si falla la inserción
+      if (authUser?.user?.id) {
+        await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+        console.log('ℹ️ [RIDERS][POST] Usuario de Auth eliminado por rollback');
+      }
+      throw riderError;
+    }
 
+    console.log('✅ [RIDERS][POST] Rider creado correctamente:', rider.id);
     res.status(201).json(rider);
   } catch (error) {
-    console.error('Error creating rider:', error);
+    console.error('❌ [RIDERS][POST] Error creating rider:', error);
     res.status(500).json({ error: 'Error al crear repartidor' });
   }
 });

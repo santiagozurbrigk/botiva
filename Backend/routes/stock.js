@@ -11,6 +11,8 @@ router.post('/requests', async (req, res) => {
     const { section, requester_name, missing_items, additional_notes, restaurant_id } = req.body;
     const { supabaseAdmin } = req.app.locals;
 
+    console.log('🔵 [STOCK][POST] Creando pedido de stock', { section, requester_name, hasRestaurantId: !!(req.restaurantId || restaurant_id) });
+
     if (!section || !missing_items) {
       return res.status(400).json({ error: 'La sección y los insumos faltantes son obligatorios' });
     }
@@ -31,10 +33,12 @@ router.post('/requests', async (req, res) => {
         .single();
       
       if (restaurantError || !restaurant) {
+        console.error('❌ [STOCK][POST] Restaurante no encontrado:', restaurantId, restaurantError);
         return res.status(400).json({ error: 'Restaurante no encontrado' });
       }
       
       if (!restaurant.active) {
+        console.warn('⚠️ [STOCK][POST] Restaurante inactivo:', restaurantId);
         return res.status(400).json({ error: 'El restaurante está inactivo' });
       }
     }
@@ -59,11 +63,15 @@ router.post('/requests', async (req, res) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ [STOCK][POST] Error insertando solicitud:', error);
+      throw error;
+    }
 
+    console.log('✅ [STOCK][POST] Pedido de stock creado:', data.id);
     res.status(201).json(data);
   } catch (error) {
-    console.error('Error creating stock request:', error);
+    console.error('❌ [STOCK][POST] Error creating stock request:', error);
     res.status(500).json({ error: 'Error al registrar el pedido de stock' });
   }
 });
@@ -79,6 +87,8 @@ router.get('/requests', authenticateAdmin, async (req, res) => {
       return res.status(403).json({ error: 'No se pudo determinar el restaurante' });
     }
 
+    console.log('🔵 [STOCK][GET] Listando pedidos para restaurante:', restaurantId, 'status:', status || 'todos');
+
     let query = supabaseAdmin
       .from('stock_requests')
       .select('*')
@@ -91,11 +101,15 @@ router.get('/requests', authenticateAdmin, async (req, res) => {
 
     const { data, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ [STOCK][GET] Error Supabase:', error);
+      throw error;
+    }
 
+    console.log('✅ [STOCK][GET] Pedidos encontrados:', data?.length || 0);
     res.json(data);
   } catch (error) {
-    console.error('Error fetching stock requests:', error);
+    console.error('❌ [STOCK][GET] Error fetching stock requests:', error);
     res.status(500).json({ error: 'Error al obtener pedidos de stock' });
   }
 });
