@@ -239,7 +239,7 @@ export default function OrderDetail() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <button
             onClick={() => navigate('/admin/orders')}
@@ -257,10 +257,10 @@ export default function OrderDetail() {
             {new Date(order.created_at).toLocaleString('es-ES')}
           </p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <button
             onClick={handleEditClick}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
           >
             <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -443,8 +443,8 @@ export default function OrderDetail() {
 
       {/* Modal de Edición */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 px-4">
+          <div className="relative top-6 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-2xl bg-white max-h-[90vh] overflow-y-auto">
             <div className="mt-3">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium text-gray-900">Editar Pedido</h3>
@@ -518,7 +518,7 @@ export default function OrderDetail() {
 
                 {/* Items del Pedido */}
                 <div>
-                  <div className="flex justify-between items-center mb-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
                     <label className="block text-sm font-medium text-gray-700">Items del Pedido *</label>
                     <button
                       type="button"
@@ -528,25 +528,27 @@ export default function OrderDetail() {
                       + Agregar Item
                     </button>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {editFormData.items.map((item, index) => (
-                      <div key={index} className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
-                        <select
-                          value={item.product_id || ''}
-                          onChange={(e) => handleEditItemChange(index, 'product_id', e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
-                        >
-                          <option value="">Seleccionar producto</option>
-                          {products.map(product => (
-                            <option key={product.id} value={product.id}>{product.name}</option>
-                          ))}
-                        </select>
+                      <div key={index} className="grid grid-cols-1 gap-2 md:grid-cols-[1.5fr,1fr,0.8fr,1fr,auto] p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <select
+                            value={item.product_id || ''}
+                            onChange={(e) => handleEditItemChange(index, 'product_id', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                          >
+                            <option value="">Seleccionar producto</option>
+                            {products.map(product => (
+                              <option key={product.id} value={product.id}>{product.name}</option>
+                            ))}
+                          </select>
+                        </div>
                         <input
                           type="text"
                           placeholder="Nombre"
                           value={item.name}
                           onChange={(e) => handleEditItemChange(index, 'name', e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
                         />
                         <input
                           type="number"
@@ -554,7 +556,7 @@ export default function OrderDetail() {
                           min="1"
                           value={item.quantity}
                           onChange={(e) => handleEditItemChange(index, 'quantity', e.target.value)}
-                          className="w-20 px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
                         />
                         <input
                           type="number"
@@ -562,12 +564,12 @@ export default function OrderDetail() {
                           placeholder="Precio"
                           value={item.unit_price}
                           onChange={(e) => handleEditItemChange(index, 'unit_price', e.target.value)}
-                          className="w-24 px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
                         />
                         <button
                           type="button"
                           onClick={() => handleRemoveItem(index)}
-                          className="p-2 text-red-600 hover:text-red-800"
+                          className="p-2 text-red-600 hover:text-red-800 justify-self-end"
                         >
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -609,7 +611,7 @@ export default function OrderDetail() {
                 </div>
 
                 {/* Botones */}
-                <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <div className="flex flex-wrap justify-end gap-3 pt-4 border-t border-gray-200">
                   <button
                     type="button"
                     onClick={() => setShowEditModal(false)}
@@ -620,7 +622,7 @@ export default function OrderDetail() {
                   <button
                     type="submit"
                     disabled={editFormData.items.length === 0}
-                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    className="btn-primary text-sm px-6 py-2 rounded-xl disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     Guardar Cambios
                   </button>

@@ -44,7 +44,7 @@ export default function StockRequest() {
 
     if (!restaurantId) {
       setErrorMessage(
-        'Necesitamos saber a qué restaurante pertenece este pedido. Copia el enlace con ?restaurant_id=<UUID> o ingresa el restaurant_id manualmente.'
+        'Necesitamos saber a qué restaurante pertenece este pedido. Abre este formulario desde el enlace que incluye ?restaurant_id=<UUID>.'
       );
       setSubmitting(false);
       return;
@@ -161,7 +161,7 @@ export default function StockRequest() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-semibold rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed transition"
+            className="w-full btn-primary text-base rounded-2xl shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {submitting ? 'Enviando...' : 'Enviar pedido'}
           </button>

@@ -57,7 +57,7 @@ export default function Stock() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Pedidos de Stock</h1>
         <p className="mt-1 text-sm text-gray-600">
           Revisá los pedidos enviados desde las plazas y actualizá su estado según el seguimiento.
@@ -83,7 +83,7 @@ export default function Stock() {
         <button
           type="button"
           onClick={fetchRequests}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          className="btn-primary text-sm rounded-xl px-6 py-2"
         >
           Actualizar
         </button>

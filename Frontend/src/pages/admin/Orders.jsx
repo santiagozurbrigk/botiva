@@ -408,14 +408,14 @@ export default function Orders() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Pedidos</h1>
           <p className="mt-1 text-sm text-gray-600">Gestiona los pedidos del restaurante</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+          className="btn-primary text-sm rounded-xl px-6 py-2"
         >
           + Nuevo Pedido
         </button>
@@ -442,50 +442,29 @@ export default function Orders() {
         </div>
       )}
 
-      <div className="flex space-x-4">
-        <button
-          onClick={() => setFilter('')}
-          className={`px-4 py-2 rounded-md text-sm font-medium ${
-            filter === '' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          Todos
-        </button>
-        <button
-          onClick={() => setFilter('pendiente')}
-          className={`px-4 py-2 rounded-md text-sm font-medium ${
-            filter === 'pendiente' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          Pendientes
-        </button>
-        <button
-          onClick={() => setFilter('en_proceso')}
-          className={`px-4 py-2 rounded-md text-sm font-medium ${
-            filter === 'en_proceso' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          En Proceso
-        </button>
-        <button
-          onClick={() => setFilter('finalizado')}
-          className={`px-4 py-2 rounded-md text-sm font-medium ${
-            filter === 'finalizado' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          Finalizados
-        </button>
-        <button
-          onClick={() => setFilter('entregado')}
-          className={`px-4 py-2 rounded-md text-sm font-medium ${
-            filter === 'entregado' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          Entregados
-        </button>
+      <div className="flex flex-wrap gap-2">
+        {[
+          { label: 'Todos', value: '' },
+          { label: 'Pendientes', value: 'pendiente' },
+          { label: 'En Proceso', value: 'en_proceso' },
+          { label: 'Finalizados', value: 'finalizado' },
+          { label: 'Entregados', value: 'entregado' },
+        ].map(option => (
+          <button
+            key={option.value || 'all'}
+            onClick={() => setFilter(option.value)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              filter === option.value
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
       </div>
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      <div className="bg-white shadow rounded-lg">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -577,8 +556,8 @@ export default function Orders() {
 
       {/* Modal para crear pedido */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 px-4">
+          <div className="relative top-6 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-2xl bg-white">
             <div className="mt-3">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium text-gray-900">Nuevo Pedido</h3>
@@ -789,7 +768,7 @@ export default function Orders() {
                 </div>
 
                 {/* Botones */}
-                <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <div className="flex flex-wrap justify-end gap-3 pt-4 border-t border-gray-200">
                   <button
                     type="button"
                     onClick={() => { setShowCreateModal(false); resetForm(); }}
@@ -800,7 +779,7 @@ export default function Orders() {
                   <button
                     type="submit"
                     disabled={formData.items.length === 0}
-                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    className="btn-primary text-sm px-6 py-2 rounded-xl disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     Crear Pedido
                   </button>

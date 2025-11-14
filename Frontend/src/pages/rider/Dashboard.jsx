@@ -120,7 +120,7 @@ export default function RiderDashboard() {
       <div className="grid grid-cols-1 gap-4">
         {orders.map((order) => (
           <div key={order.id} className="bg-white shadow rounded-lg p-6">
-            <div className="flex justify-between items-start">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -196,23 +196,21 @@ export default function RiderDashboard() {
                 )}
               </div>
 
-              <div className="ml-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Estado del Pedido</label>
-                  <CustomSelect
-                    value={order.status}
-                    onChange={(newStatus) => handleStatusChange(order.id, newStatus)}
-                    options={[
-                      { value: 'pendiente', label: 'Pendiente' },
-                      { value: 'en_proceso', label: 'En Proceso' },
-                      { value: 'finalizado', label: 'Listo para retirar' },
-                      { value: 'entregado', label: 'Entregado' },
-                    ]}
-                    getColorClass={getStatusColor}
-                    getLabel={getStatusLabel}
-                    className="w-full"
-                  />
-                </div>
+              <div className="lg:w-64">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Estado del Pedido</label>
+                <CustomSelect
+                  value={order.status}
+                  onChange={(newStatus) => handleStatusChange(order.id, newStatus)}
+                  options={[
+                    { value: 'pendiente', label: 'Pendiente' },
+                    { value: 'en_proceso', label: 'En Proceso' },
+                    { value: 'finalizado', label: 'Listo para retirar' },
+                    { value: 'entregado', label: 'Entregado' },
+                  ]}
+                  getColorClass={getStatusColor}
+                  getLabel={getStatusLabel}
+                  className="w-full"
+                />
               </div>
             </div>
           </div>

@@ -167,7 +167,7 @@ export default function RestaurantDetails() {
 
   return (
     <div className="space-y-6 animate-page">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <button
             onClick={() => navigate('/super-admin')}
@@ -195,13 +195,13 @@ export default function RestaurantDetails() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">Restaurant ID (UUID)</label>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <code className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm text-gray-900 font-mono break-all">
                 {restaurant.id}
               </code>
               <button
                 onClick={() => copyToClipboard(restaurant.id, 'UUID copiado al portapapeles')}
-                className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                className="btn-primary justify-center text-sm px-4 py-2 rounded-xl"
                 title="Copiar UUID"
               >
                 📋 Copiar
@@ -271,16 +271,16 @@ export default function RestaurantDetails() {
                         {link.url}
                       </code>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col w-full gap-2 sm:flex-row sm:w-auto">
                       <button
                         onClick={() => window.open(link.url, '_blank')}
-                        className="px-3 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+                        className="w-full sm:w-auto px-3 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
                       >
                         Abrir
                       </button>
                       <button
                         onClick={() => copyToClipboard(link.url, 'Link copiado al portapapeles')}
-                        className="px-3 py-2 text-sm font-semibold rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+                        className="w-full sm:w-auto btn-primary px-3 py-2 text-sm font-semibold rounded-md"
                       >
                         Copiar
                       </button>
@@ -338,30 +338,32 @@ export default function RestaurantDetails() {
           <p className="mt-1 text-sm text-gray-600">{admins.length} administrador(es) registrado(s)</p>
         </div>
         {admins.length > 0 ? (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Creado</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {admins.map((admin) => (
-                <tr key={admin.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {admin.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {admin.email}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {formatDate(admin.created_at)}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Creado</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {admins.map((admin) => (
+                  <tr key={admin.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {admin.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {admin.email}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {formatDate(admin.created_at)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <div className="px-6 py-8 text-center text-gray-500">
             <p>No hay administradores registrados para este restaurante</p>

@@ -1,15 +1,20 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function AdminLayout({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
+  const closeSidebar = () => setIsSidebarOpen(false);
 
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -25,20 +30,64 @@ export default function AdminLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Top bar (mobile) */}
+      <header className="lg:hidden sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-gray-500">Panel</p>
+            <p className="text-lg font-semibold text-gray-900">Administración</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleLogout}
+              className="p-2 text-gray-500 hover:text-gray-700 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+              title="Cerrar sesión"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+            <button
+              onClick={toggleSidebar}
+              className="p-2 text-gray-500 hover:text-gray-700 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+              aria-label="Abrir menú"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </header>
+
       {/* Sidebar */}
-      <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg">
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:static lg:translate-x-0`}
+      >
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-center h-16 px-4 border-b border-gray-200">
-            <h1 className="text-xl font-bold py-5 text-gray-900">Panel de administración</h1>
+          <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
+            <h1 className="text-xl font-bold text-gray-900">Panel de administración</h1>
+            <button
+              onClick={closeSidebar}
+              className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+              aria-label="Cerrar menú"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
           
-          <nav className="flex-1 px-4 py-6 space-y-2">
+          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href;
               return (
                 <Link
                   key={item.name}
                   to={item.href}
+                  onClick={closeSidebar}
                   className={`flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors ${
                     isActive
                       ? 'bg-indigo-50 text-indigo-600'
@@ -77,7 +126,7 @@ export default function AdminLayout({ children }) {
               </div>
               <button
                 onClick={handleLogout}
-                className="ml-2 p-2 text-gray-400 hover:text-gray-600"
+                className="ml-2 p-2 text-gray-400 hover:text-gray-600 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
                 title="Cerrar sesión"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -89,9 +138,18 @@ export default function AdminLayout({ children }) {
         </div>
       </div>
 
+      {/* Overlay */}
+      {isSidebarOpen && (
+        <button
+          onClick={closeSidebar}
+          aria-label="Cerrar menú"
+          className="fixed inset-0 bg-black/30 z-40 lg:hidden"
+        />
+      )}
+
       {/* Main content */}
-      <div className="pl-64">
-        <main className="p-8">
+      <div className="lg:pl-64">
+        <main className="p-4 sm:p-6 lg:p-8">
           {children}
         </main>
       </div>
