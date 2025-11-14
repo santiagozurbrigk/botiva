@@ -7,6 +7,11 @@ const router = express.Router();
 // En producción, se puede agregar autenticación específica si es necesario
 router.get('/orders', async (req, res) => {
   try {
+    const restaurantId = req.query.restaurant_id;
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'restaurant_id es requerido' });
+    }
+
     const { supabaseAdmin } = req.app.locals;
 
     // Obtener pedidos pendientes de tipo dine_in o takeout
@@ -19,6 +24,7 @@ router.get('/orders', async (req, res) => {
       `)
       .eq('status', 'pendiente')
       .in('order_type', ['dine_in', 'takeout'])
+      .eq('restaurant_id', restaurantId)
       .order('created_at', { ascending: true });
 
     if (error) throw error;
@@ -34,7 +40,12 @@ router.get('/orders', async (req, res) => {
 router.patch('/orders/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, restaurant_id } = req.body;
+    const restaurantId = restaurant_id;
+
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'restaurant_id es requerido' });
+    }
 
     // Validar UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -54,6 +65,7 @@ router.patch('/orders/:id/status', async (req, res) => {
       .from('orders')
       .select('*')
       .eq('id', id)
+      .eq('restaurant_id', restaurantId)
       .eq('status', 'pendiente')
       .in('order_type', ['dine_in', 'takeout'])
       .single();
@@ -67,6 +79,7 @@ router.patch('/orders/:id/status', async (req, res) => {
       .from('orders')
       .update({ status })
       .eq('id', id)
+      .eq('restaurant_id', restaurantId)
       .select(`
         *,
         waiter:waiters(id, name),

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
@@ -52,9 +52,9 @@ export default function RestaurantDetails() {
     }).format(amount);
   };
 
-  const copyToClipboard = (text) => {
+  const copyToClipboard = (text, message = 'Copiado al portapapeles') => {
     navigator.clipboard.writeText(text).then(() => {
-      alert('UUID copiado al portapapeles');
+      alert(message);
     }).catch(err => {
       console.error('Error al copiar:', err);
       // Fallback para navegadores que no soportan clipboard API
@@ -64,9 +64,70 @@ export default function RestaurantDetails() {
       textArea.select();
       document.execCommand('copy');
       document.body.removeChild(textArea);
-      alert('UUID copiado al portapapeles');
+      alert(message);
     });
   };
+
+  const baseAppUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+  const linkSections = useMemo(() => {
+    if (!restaurant) return [];
+
+    const internalLinks = [
+      {
+        id: 'admin-login',
+        label: 'Login de Administrador',
+        description: 'Ingreso principal de los administradores del restaurante.',
+        url: `${baseAppUrl}/login`,
+      },
+      {
+        id: 'admin-panel',
+        label: 'Panel de Administración',
+        description: 'Dashboard completo del restaurante (requiere login).',
+        url: `${baseAppUrl}/admin`,
+      },
+      {
+        id: 'waiter-panel',
+        label: 'Panel de Mozos',
+        description: 'Interfaz para mozos (requiere usuario mozo).',
+        url: `${baseAppUrl}/waiter`,
+      },
+      {
+        id: 'rider-panel',
+        label: 'Panel de Repartidores',
+        description: 'Seguimiento de pedidos para repartidores (requiere usuario repartidor).',
+        url: `${baseAppUrl}/rider`,
+      },
+    ];
+
+    const publicLinks = [
+      {
+        id: 'kitchen-screen',
+        label: 'Pantalla de Cocina',
+        description: 'Vista en tiempo real de pedidos para cocina (sin login).',
+        url: `${baseAppUrl}/kitchen?restaurant_id=${restaurant.id}`,
+        highlight: true,
+      },
+      {
+        id: 'stock-form',
+        label: 'Formulario de Pedido de Stock',
+        description: 'Link personalizado para que la cocina envíe pedidos de reposición.',
+        url: `${baseAppUrl}/stock?restaurant_id=${restaurant.id}`,
+        highlight: true,
+      },
+    ];
+
+    return [
+      {
+        title: 'Links operativos (requieren login)',
+        items: internalLinks,
+      },
+      {
+        title: 'Links públicos personalizados',
+        items: publicLinks,
+      },
+    ];
+  }, [restaurant, baseAppUrl]);
 
   if (loading) {
     return (
@@ -139,7 +200,7 @@ export default function RestaurantDetails() {
                 {restaurant.id}
               </code>
               <button
-                onClick={() => copyToClipboard(restaurant.id)}
+                onClick={() => copyToClipboard(restaurant.id, 'UUID copiado al portapapeles')}
                 className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
                 title="Copiar UUID"
               >
@@ -178,6 +239,57 @@ export default function RestaurantDetails() {
               <p className="mt-1 text-sm text-gray-900">{formatDate(restaurant.subscription_end_date)}</p>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Links del restaurante */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Links del Restaurante</h2>
+            <p className="text-sm text-gray-500">
+              Comparte estos enlaces con el restaurante cuando comience a usar Botiva.
+            </p>
+          </div>
+        </div>
+        <div className="space-y-6">
+          {linkSections.map((section) => (
+            <div key={section.title}>
+              <h3 className="text-sm font-semibold text-gray-600 mb-3">{section.title}</h3>
+              <div className="space-y-3">
+                {section.items.map((link) => (
+                  <div
+                    key={link.id}
+                    className={`flex flex-col md:flex-row md:items-center gap-3 p-3 border rounded-lg ${
+                      link.highlight ? 'border-indigo-200 bg-indigo-50' : 'border-gray-200'
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-gray-800">{link.label}</p>
+                      <p className="text-xs text-gray-500">{link.description}</p>
+                      <code className="mt-2 block text-xs text-gray-700 break-all bg-gray-50 px-2 py-1 rounded">
+                        {link.url}
+                      </code>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => window.open(link.url, '_blank')}
+                        className="px-3 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+                      >
+                        Abrir
+                      </button>
+                      <button
+                        onClick={() => copyToClipboard(link.url, 'Link copiado al portapapeles')}
+                        className="px-3 py-2 text-sm font-semibold rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+                      >
+                        Copiar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

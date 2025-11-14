@@ -12,21 +12,13 @@ const SECTIONS = [
   'Otro',
 ];
 
-const STORAGE_KEY = 'botiva_stock_restaurant_id';
-
 export default function StockRequest() {
-  const initialRestaurantId = useMemo(() => {
+  const restaurantId = useMemo(() => {
     if (typeof window === 'undefined') return '';
     const params = new URLSearchParams(window.location.search);
-    const idFromUrl = params.get('restaurant_id');
-    if (idFromUrl) {
-      localStorage.setItem(STORAGE_KEY, idFromUrl);
-      return idFromUrl;
-    }
-    return localStorage.getItem(STORAGE_KEY) || '';
+    return params.get('restaurant_id') || '';
   }, []);
 
-  const [restaurantId, setRestaurantId] = useState(initialRestaurantId);
   const [formData, setFormData] = useState({
     section: '',
     requester_name: '',
@@ -42,20 +34,6 @@ export default function StockRequest() {
       ...prev,
       [field]: value,
     }));
-  };
-
-  const shareableLink =
-    typeof window !== 'undefined' && restaurantId
-      ? `${window.location.origin}${window.location.pathname}?restaurant_id=${restaurantId}`
-      : '';
-
-  const handleRestaurantIdChange = value => {
-    setRestaurantId(value.trim());
-    if (value.trim()) {
-      localStorage.setItem(STORAGE_KEY, value.trim());
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-    }
   };
 
   const handleSubmit = async (event) => {
@@ -113,32 +91,12 @@ export default function StockRequest() {
           </div>
         )}
 
-        <div className="mb-6 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3">
-          <p className="text-sm font-semibold text-indigo-900 mb-2">Restaurante destino</p>
-          <p className="text-sm text-indigo-800">
-            Este formulario necesita saber a qué restaurante pertenece el pedido de stock.
-            Usa el ID que aparece en el panel de Super Admin o comparte el enlace con
-            <code className="mx-1 px-1 py-0.5 bg-white rounded text-xs">?restaurant_id=&lt;UUID&gt;</code>
-          </p>
-          <div className="mt-3 flex flex-col gap-2">
-            <input
-              type="text"
-              value={restaurantId}
-              onChange={(event) => handleRestaurantIdChange(event.target.value)}
-              placeholder="Ej: 0301f342-f19b-42cb-95b4-daa693962492"
-              className="block w-full px-4 py-3 rounded-lg border-2 border-indigo-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 bg-white transition-colors font-mono text-sm"
-            />
-            {shareableLink && (
-              <button
-                type="button"
-                onClick={() => navigator.clipboard.writeText(shareableLink)}
-                className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg text-indigo-700 bg-white border border-indigo-200 hover:bg-indigo-100 transition"
-              >
-                Copiar enlace con restaurant_id
-              </button>
-            )}
+        {!restaurantId && (
+          <div className="mb-6 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-800">
+            Este formulario debe abrirse desde el enlace personalizado que te envía Botiva.
+            Solicita nuevamente el enlace con <code className="mx-1 px-1 py-0.5 bg-white rounded text-xs">?restaurant_id=&lt;UUID&gt;</code> para poder enviar pedidos de stock.
           </div>
-        </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>

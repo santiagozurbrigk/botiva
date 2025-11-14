@@ -1,13 +1,20 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { api } from '../../lib/api';
 import SwipeableOrderCard from '../../components/kitchen/SwipeableOrderCard';
 
 export default function Kitchen() {
+  const restaurantId = useMemo(() => {
+    if (typeof window === 'undefined') return '';
+    const params = new URLSearchParams(window.location.search);
+    return params.get('restaurant_id') || '';
+  }, []);
+
   const [orders, setOrders] = useState([]);
   const [hiddenOrderIds, setHiddenOrderIds] = useState(new Set());
   const hiddenOrderIdsRef = useRef(new Set());
   const previousOrderIdsRef = useRef(new Set());
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
   const [audioEnabled, setAudioEnabled] = useState(() => {
     // Verificar si el audio estaba habilitado anteriormente
     return localStorage.getItem('kitchenAudioEnabled') === 'true';
@@ -111,21 +118,17 @@ export default function Kitchen() {
     }
   }, [audioEnabled]);
 
-  // Función para obtener pedidos de cocina (sin token, endpoint público)
-  const fetchInitialKitchenOrders = useCallback(async () => {
-    try {
-      const data = await api.getKitchenOrders();
-      return Array.isArray(data) ? data : [];
-    } catch (error) {
-      console.error('Error fetching kitchen orders:', error);
-      return [];
-    }
-  }, []);
-
   // Función para obtener y actualizar pedidos
   const fetchOrders = useCallback(async () => {
+    if (!restaurantId) {
+      setErrorMessage('Este panel debe abrirse desde el enlace personalizado que incluye el restaurant_id.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const data = await api.getKitchenOrders();
+      setErrorMessage('');
+      const data = await api.getKitchenOrders(restaurantId);
       const ordersArray = Array.isArray(data) ? data : [];
       // Filtrar comandas que ya están marcadas como "listo para retirar" o están ocultas
       const filteredOrders = ordersArray.filter(order => 
@@ -154,10 +157,11 @@ export default function Kitchen() {
       setOrders(filteredOrders);
     } catch (error) {
       console.error('Error fetching kitchen orders:', error);
+      setErrorMessage(error.message || 'No pudimos cargar las comandas.');
     } finally {
       setLoading(false);
     }
-  }, [playNotificationSound]);
+  }, [restaurantId, playNotificationSound]);
 
   // Usar polling cada 5 segundos para cocina
   useEffect(() => {
@@ -199,8 +203,13 @@ export default function Kitchen() {
   }, []); // Solo ejecutar una vez al cargar
 
   const handleMarkReady = async (orderId) => {
+    if (!restaurantId) {
+      alert('Falta el restaurant_id. Abra este panel desde el enlace provisto por Botiva.');
+      return;
+    }
+
     try {
-      await api.updateKitchenOrderStatus(orderId, 'listo para retirar');
+      await api.updateKitchenOrderStatus(orderId, 'listo para retirar', restaurantId);
       // Ocultar la comanda de la vista ya que cambió de estado
       const newHiddenSet = new Set([...hiddenOrderIdsRef.current, orderId]);
       setHiddenOrderIds(newHiddenSet);
@@ -280,6 +289,12 @@ export default function Kitchen() {
             </div>
           )}
         </div>
+
+        {errorMessage && (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {errorMessage}
+          </div>
+        )}
 
         {orders.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg shadow">

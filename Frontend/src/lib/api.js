@@ -405,8 +405,11 @@ export const api = {
   },
 
   // Kitchen
-  getKitchenOrders: async () => {
-    const response = await fetch(`${API_URL}/api/kitchen/orders`);
+  getKitchenOrders: async (restaurantId) => {
+    if (!restaurantId) {
+      throw new Error('restaurant_id es requerido para obtener pedidos de cocina');
+    }
+    const response = await fetch(`${API_URL}/api/kitchen/orders?restaurant_id=${restaurantId}`);
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.error || 'Error al obtener pedidos de cocina');
@@ -414,13 +417,13 @@ export const api = {
     return Array.isArray(data) ? data : [];
   },
 
-  updateKitchenOrderStatus: async (id, status) => {
+  updateKitchenOrderStatus: async (id, status, restaurantId) => {
     const response = await fetch(`${API_URL}/api/kitchen/orders/${id}/status`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, restaurant_id: restaurantId }),
     });
     const data = await response.json();
     if (!response.ok) {
