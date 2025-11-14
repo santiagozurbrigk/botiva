@@ -119,6 +119,11 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, phone, active } = req.body;
+    const restaurantId = req.restaurantId;
+
+    if (!restaurantId) {
+      return res.status(403).json({ error: 'No se pudo determinar el restaurante' });
+    }
 
     const { supabaseAdmin } = req.app.locals;
 
@@ -131,6 +136,7 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
       .from('waiters')
       .update(updates)
       .eq('id', id)
+      .eq('restaurant_id', restaurantId) // Asegurar que solo actualice waiters de su restaurante
       .select()
       .single();
 
@@ -151,20 +157,32 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
 router.delete('/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
+    const restaurantId = req.restaurantId;
+
+    if (!restaurantId) {
+      return res.status(403).json({ error: 'No se pudo determinar el restaurante' });
+    }
+
     const { supabaseAdmin } = req.app.locals;
 
-    // Obtener el waiter para eliminar su cuenta de auth
+    // Obtener el waiter para eliminar su cuenta de auth y verificar que pertenece al restaurante
     const { data: waiter } = await supabaseAdmin
       .from('waiters')
-      .select('auth_user_id')
+      .select('auth_user_id, restaurant_id')
       .eq('id', id)
+      .eq('restaurant_id', restaurantId) // Asegurar que solo pueda eliminar waiters de su restaurante
       .single();
+
+    if (!waiter) {
+      return res.status(404).json({ error: 'Mozo no encontrado' });
+    }
 
     // Eliminar waiter
     const { error } = await supabaseAdmin
       .from('waiters')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('restaurant_id', restaurantId);
 
     if (error) throw error;
 

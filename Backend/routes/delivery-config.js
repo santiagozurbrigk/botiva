@@ -9,17 +9,15 @@ router.get('/', authenticateAdmin, async (req, res) => {
     const { supabaseAdmin } = req.app.locals;
     const restaurantId = req.restaurantId;
 
+    if (!restaurantId) {
+      return res.status(403).json({ error: 'No se pudo determinar el restaurante' });
+    }
+
     let query = supabaseAdmin
       .from('delivery_config')
       .select('*')
-      .eq('is_active', true);
-
-    // Si la tabla tiene restaurant_id, filtrar por él
-    // Si no, usar la primera configuración activa (compatibilidad hacia atrás)
-    if (restaurantId) {
-      // Intentar filtrar por restaurant_id si existe la columna
-      query = query.eq('restaurant_id', restaurantId);
-    }
+      .eq('is_active', true)
+      .eq('restaurant_id', restaurantId); // Filtrar por restaurant_id
 
     const { data, error } = await query.single();
 
@@ -28,13 +26,9 @@ router.get('/', authenticateAdmin, async (req, res) => {
       const configData = {
         delivery_time_minutes: 30,
         delivery_cost: 0.00,
-        is_active: true
+        is_active: true,
+        restaurant_id: restaurantId // Asociar configuración al restaurante
       };
-      
-      // Agregar restaurant_id si existe la columna
-      if (restaurantId) {
-        configData.restaurant_id = restaurantId;
-      }
 
       const { data: newConfig, error: insertError } = await supabaseAdmin
         .from('delivery_config')
@@ -62,6 +56,10 @@ router.put('/', authenticateAdmin, async (req, res) => {
     const { supabaseAdmin } = req.app.locals;
     const restaurantId = req.restaurantId;
 
+    if (!restaurantId) {
+      return res.status(403).json({ error: 'No se pudo determinar el restaurante' });
+    }
+
     // Validar datos de entrada
     if (delivery_time_minutes === undefined || delivery_cost === undefined) {
       return res.status(400).json({ 
@@ -76,27 +74,19 @@ router.put('/', authenticateAdmin, async (req, res) => {
     }
 
     // Desactivar configuración actual del restaurante
-    let deactivateQuery = supabaseAdmin
+    await supabaseAdmin
       .from('delivery_config')
       .update({ is_active: false })
-      .eq('is_active', true);
-
-    if (restaurantId) {
-      deactivateQuery = deactivateQuery.eq('restaurant_id', restaurantId);
-    }
-
-    await deactivateQuery;
+      .eq('is_active', true)
+      .eq('restaurant_id', restaurantId);
 
     // Crear nueva configuración activa
     const configData = {
       delivery_time_minutes: parseInt(delivery_time_minutes),
       delivery_cost: parseFloat(delivery_cost),
-      is_active: true
+      is_active: true,
+      restaurant_id: restaurantId // Asociar configuración al restaurante
     };
-
-    if (restaurantId) {
-      configData.restaurant_id = restaurantId;
-    }
 
     const { data, error } = await supabaseAdmin
       .from('delivery_config')
@@ -119,13 +109,14 @@ router.get('/history', authenticateAdmin, async (req, res) => {
     const { supabaseAdmin } = req.app.locals;
     const restaurantId = req.restaurantId;
 
+    if (!restaurantId) {
+      return res.status(403).json({ error: 'No se pudo determinar el restaurante' });
+    }
+
     let query = supabaseAdmin
       .from('delivery_config')
-      .select('*');
-
-    if (restaurantId) {
-      query = query.eq('restaurant_id', restaurantId);
-    }
+      .select('*')
+      .eq('restaurant_id', restaurantId); // Filtrar por restaurant_id
 
     query = query.order('created_at', { ascending: false }).limit(20);
 

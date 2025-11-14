@@ -47,12 +47,22 @@ router.get('/:id', async (req, res) => {
   try {
     const { supabaseAdmin } = req.app.locals;
     const { id } = req.params;
+    const restaurantId = req.restaurantId; // Puede ser undefined si es acceso público (cocina)
 
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('extras')
       .select('*')
-      .eq('id', id)
-      .single();
+      .eq('id', id);
+
+    // Si hay restaurantId (admin autenticado), filtrar por él
+    if (restaurantId) {
+      query = query.eq('restaurant_id', restaurantId);
+    } else {
+      // Si es acceso público, solo mostrar extras activos
+      query = query.eq('active', true);
+    }
+
+    const { data, error } = await query.single();
 
     if (error) throw error;
 
@@ -77,7 +87,29 @@ router.post('/', authenticateAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
 
+    // Validación crítica: asegurar que restaurantId existe
+    if (!restaurantId) {
+      console.error('Error: restaurantId no está definido en req.restaurantId');
+      return res.status(403).json({ error: 'No se pudo determinar el restaurante. Contacta al administrador.' });
+    }
+
     const { supabaseAdmin } = req.app.locals;
+
+    // Verificar que el restaurante existe y está activo
+    const { data: restaurant, error: restaurantError } = await supabaseAdmin
+      .from('restaurants')
+      .select('id, active')
+      .eq('id', restaurantId)
+      .single();
+
+    if (restaurantError || !restaurant) {
+      console.error('Error: Restaurante no encontrado:', restaurantId);
+      return res.status(403).json({ error: 'Restaurante no encontrado' });
+    }
+
+    if (!restaurant.active) {
+      return res.status(403).json({ error: 'El restaurante está inactivo' });
+    }
 
     const { data, error } = await supabaseAdmin
       .from('extras')
@@ -107,6 +139,11 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, price, category, image_url, active } = req.body;
+    const restaurantId = req.restaurantId;
+
+    if (!restaurantId) {
+      return res.status(403).json({ error: 'No se pudo determinar el restaurante' });
+    }
 
     const { supabaseAdmin } = req.app.locals;
 
@@ -122,6 +159,7 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
       .from('extras')
       .update(updates)
       .eq('id', id)
+      .eq('restaurant_id', restaurantId) // Asegurar que solo actualice extras de su restaurante
       .select()
       .single();
 
@@ -142,12 +180,19 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
 router.delete('/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
+    const restaurantId = req.restaurantId;
+
+    if (!restaurantId) {
+      return res.status(403).json({ error: 'No se pudo determinar el restaurante' });
+    }
+
     const { supabaseAdmin } = req.app.locals;
 
     const { error } = await supabaseAdmin
       .from('extras')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('restaurant_id', restaurantId); // Asegurar que solo elimine extras de su restaurante
 
     if (error) throw error;
 

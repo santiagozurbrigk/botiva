@@ -49,12 +49,22 @@ router.get('/:id', async (req, res) => {
   try {
     const { supabaseAdmin } = req.app.locals;
     const { id } = req.params;
+    const restaurantId = req.restaurantId; // Puede ser undefined si es acceso público (cocina)
 
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('products')
       .select('*')
-      .eq('id', id)
-      .single();
+      .eq('id', id);
+
+    // Si hay restaurantId (admin autenticado), filtrar por él
+    if (restaurantId) {
+      query = query.eq('restaurant_id', restaurantId);
+    } else {
+      // Si es acceso público, solo mostrar productos activos
+      query = query.eq('active', true);
+    }
+
+    const { data, error } = await query.single();
 
     if (error) throw error;
 
@@ -75,11 +85,36 @@ router.post('/', authenticateAdmin, async (req, res) => {
     const { name, description, price, category, image_url, active } = req.body;
     const restaurantId = req.restaurantId;
 
+    // Validación de campos requeridos
     if (!name || !price || !category) {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
 
+    // Validación crítica: asegurar que restaurantId existe
+    if (!restaurantId) {
+      console.error('Error: restaurantId no está definido en req.restaurantId');
+      return res.status(403).json({ error: 'No se pudo determinar el restaurante. Contacta al administrador.' });
+    }
+
     const { supabaseAdmin } = req.app.locals;
+
+    // Verificar que el restaurante existe y está activo
+    const { data: restaurant, error: restaurantError } = await supabaseAdmin
+      .from('restaurants')
+      .select('id, active')
+      .eq('id', restaurantId)
+      .single();
+
+    if (restaurantError || !restaurant) {
+      console.error('Error: Restaurante no encontrado:', restaurantId);
+      return res.status(403).json({ error: 'Restaurante no encontrado' });
+    }
+
+    if (!restaurant.active) {
+      return res.status(403).json({ error: 'El restaurante está inactivo' });
+    }
+
+    console.log('Creando producto para restaurante:', restaurantId);
 
     const { data, error } = await supabaseAdmin
       .from('products')
@@ -95,8 +130,12 @@ router.post('/', authenticateAdmin, async (req, res) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error al insertar producto:', error);
+      throw error;
+    }
 
+    console.log('Producto creado exitosamente:', data.id, 'para restaurante:', restaurantId);
     res.status(201).json(data);
   } catch (error) {
     console.error('Error creating product:', error);

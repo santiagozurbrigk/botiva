@@ -22,6 +22,23 @@ router.post('/requests', async (req, res) => {
       return res.status(400).json({ error: 'restaurant_id es requerido' });
     }
 
+    // Si viene del middleware (admin autenticado), validar que el restaurante existe y está activo
+    if (req.restaurantId) {
+      const { data: restaurant, error: restaurantError } = await supabaseAdmin
+        .from('restaurants')
+        .select('id, active')
+        .eq('id', restaurantId)
+        .single();
+      
+      if (restaurantError || !restaurant) {
+        return res.status(400).json({ error: 'Restaurante no encontrado' });
+      }
+      
+      if (!restaurant.active) {
+        return res.status(400).json({ error: 'El restaurante está inactivo' });
+      }
+    }
+
     const payload = {
       section: section.trim(),
       missing_items: missing_items.trim(),
@@ -58,6 +75,10 @@ router.get('/requests', authenticateAdmin, async (req, res) => {
     const { status } = req.query;
     const restaurantId = req.restaurantId; // Obtener restaurant_id del middleware
 
+    if (!restaurantId) {
+      return res.status(403).json({ error: 'No se pudo determinar el restaurante' });
+    }
+
     let query = supabaseAdmin
       .from('stock_requests')
       .select('*')
@@ -86,6 +107,10 @@ router.patch('/requests/:id/status', authenticateAdmin, async (req, res) => {
     const { status } = req.body;
     const { supabaseAdmin } = req.app.locals;
     const restaurantId = req.restaurantId; // Obtener restaurant_id del middleware
+
+    if (!restaurantId) {
+      return res.status(403).json({ error: 'No se pudo determinar el restaurante' });
+    }
 
     if (!status) {
       return res.status(400).json({ error: 'El estado es obligatorio' });

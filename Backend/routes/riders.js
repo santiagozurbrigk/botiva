@@ -98,6 +98,11 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, phone, active } = req.body;
+    const restaurantId = req.restaurantId;
+
+    if (!restaurantId) {
+      return res.status(403).json({ error: 'No se pudo determinar el restaurante' });
+    }
 
     const { supabaseAdmin } = req.app.locals;
 
@@ -110,6 +115,7 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
       .from('riders')
       .update(updates)
       .eq('id', id)
+      .eq('restaurant_id', restaurantId) // Asegurar que solo actualice riders de su restaurante
       .select()
       .single();
 
@@ -130,20 +136,32 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
 router.delete('/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
+    const restaurantId = req.restaurantId;
+
+    if (!restaurantId) {
+      return res.status(403).json({ error: 'No se pudo determinar el restaurante' });
+    }
+
     const { supabaseAdmin } = req.app.locals;
 
-    // Obtener el rider para eliminar su cuenta de auth
+    // Obtener el rider para eliminar su cuenta de auth y verificar que pertenece al restaurante
     const { data: rider } = await supabaseAdmin
       .from('riders')
-      .select('auth_user_id')
+      .select('auth_user_id, restaurant_id')
       .eq('id', id)
+      .eq('restaurant_id', restaurantId) // Asegurar que solo pueda eliminar riders de su restaurante
       .single();
+
+    if (!rider) {
+      return res.status(404).json({ error: 'Repartidor no encontrado' });
+    }
 
     // Eliminar rider
     const { error } = await supabaseAdmin
       .from('riders')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('restaurant_id', restaurantId);
 
     if (error) throw error;
 

@@ -254,11 +254,16 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { status, assigned_rider_id, payment_status } = req.body;
+    const restaurantId = req.restaurantId;
 
     // Validar que el ID sea un UUID válido
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(id)) {
       return res.status(400).json({ error: 'ID de pedido inválido. Debe ser un UUID válido.' });
+    }
+
+    if (!restaurantId) {
+      return res.status(403).json({ error: 'No se pudo determinar el restaurante' });
     }
 
     const { supabaseAdmin } = req.app.locals;
@@ -284,6 +289,7 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
       .from('orders')
       .update(updates)
       .eq('id', id)
+      .eq('restaurant_id', restaurantId) // Asegurar que solo actualice pedidos de su restaurante
       .select(`
         *,
         rider:riders(id, name, phone),
@@ -350,12 +356,18 @@ router.put('/:id/full', authenticateAdmin, async (req, res) => {
     }
 
     const { supabaseAdmin } = req.app.locals;
+    const restaurantId = req.restaurantId;
 
-    // Verificar que el pedido existe
+    if (!restaurantId) {
+      return res.status(403).json({ error: 'No se pudo determinar el restaurante' });
+    }
+
+    // Verificar que el pedido existe y pertenece al restaurante
     const { data: existingOrder, error: fetchError } = await supabaseAdmin
       .from('orders')
       .select('id')
       .eq('id', id)
+      .eq('restaurant_id', restaurantId) // Asegurar que solo pueda actualizar pedidos de su restaurante
       .single();
 
     if (fetchError || !existingOrder) {
@@ -760,6 +772,19 @@ router.post('/comanda', authenticateWaiter, async (req, res) => {
     const { supabaseAdmin } = req.app.locals;
     const waiterId = req.user.waiter.id;
 
+    // Obtener restaurant_id del waiter
+    const { data: waiter, error: waiterError } = await supabaseAdmin
+      .from('waiters')
+      .select('restaurant_id')
+      .eq('id', waiterId)
+      .single();
+
+    if (waiterError || !waiter || !waiter.restaurant_id) {
+      return res.status(403).json({ error: 'No se pudo determinar el restaurante del mozo' });
+    }
+
+    const restaurantId = waiter.restaurant_id;
+
     // Generar external_id único
     const externalId = `COM-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -774,6 +799,7 @@ router.post('/comanda', authenticateWaiter, async (req, res) => {
       order_type: 'dine_in',
       waiter_id: waiterId,
       table_number: parseInt(table_number),
+      restaurant_id: restaurantId, // Asociar comanda al restaurante del mozo
     };
 
     const cleanScheduledTime = typeof scheduled_delivery_time === 'string'
