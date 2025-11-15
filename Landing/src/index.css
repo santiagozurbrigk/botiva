@@ -1,0 +1,75 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --color-primary: #009fee;
+  --color-primary-dark: #0077b4;
+  --color-primary-light: #33b8f3;
+  --color-primary-tint: #e6f7ff;
+  --color-accent: #ffb703;
+  --color-ink: #0f172a;
+}
+
+:root {
+  color: var(--color-ink);
+  background-color: #ffffff;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: #f8fbff;
+  min-height: 100vh;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  background-color: var(--color-primary);
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-dark);
+  box-shadow: 0 20px 60px -25px rgba(0, 159, 238, 0.65);
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid var(--color-primary-dark);
+  outline-offset: 3px;
+}
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 159, 238, 0.3);
+  background-color: rgba(255, 255, 255, 0.6);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.scroll-pulse {
+  animation: scrollPulse 1.2s ease-out;
+}
+
+@keyframes scrollPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 159, 238, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 30px rgba(0, 159, 238, 0);
+  }
+}

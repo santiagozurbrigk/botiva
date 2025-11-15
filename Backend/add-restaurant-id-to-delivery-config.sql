@@ -16,4 +16,3 @@ END $$;
 
 -- Deshabilitar RLS en delivery_config (el backend usa Service Role Key)
 ALTER TABLE delivery_config DISABLE ROW LEVEL SECURITY;
-
