@@ -128,25 +128,35 @@ router.post('/', async (req, res) => {
       .select()
       .single();
 
-    if (orderError) throw orderError;
+    if (orderError) {
+      console.error('Error inserting order:', orderError);
+      console.error('Order data:', JSON.stringify(orderData, null, 2));
+      throw new Error(`Error al insertar pedido: ${orderError.message || JSON.stringify(orderError)}`);
+    }
 
     // Crear los items del pedido
     const orderItems = items.map(item => ({
       order_id: order.id,
-      product_id: item.product_id,
-      product_name: item.name,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
+      product_id: item.product_id || null,
+      product_name: item.name || 'Producto sin nombre',
+      quantity: parseInt(item.quantity) || 1,
+      unit_price: parseFloat(item.unit_price) || 0,
     }));
+
+    console.log('Inserting order items:', JSON.stringify(orderItems, null, 2));
 
     const { error: itemsError } = await supabaseAdmin
       .from('order_items')
       .insert(orderItems);
 
-    if (itemsError) throw itemsError;
+    if (itemsError) {
+      console.error('Error inserting order items:', itemsError);
+      console.error('Order items data:', JSON.stringify(orderItems, null, 2));
+      throw new Error(`Error al insertar items: ${itemsError.message || JSON.stringify(itemsError)}`);
+    }
 
     // Registrar evento
-    await supabaseAdmin
+    const { error: eventError } = await supabaseAdmin
       .from('order_events')
       .insert({
         order_id: order.id,
@@ -154,10 +164,20 @@ router.post('/', async (req, res) => {
         description: 'Pedido creado desde WhatsApp',
       });
 
+    if (eventError) {
+      console.error('Error inserting order event:', eventError);
+      // No lanzar error aquí, es solo un evento de log
+    }
+
     res.status(201).json(order);
   } catch (error) {
     console.error('Error creating order:', error);
-    res.status(500).json({ error: 'Error al crear pedido' });
+    console.error('Request body:', JSON.stringify(req.body, null, 2));
+    const errorMessage = error.message || 'Error al crear pedido';
+    res.status(500).json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
