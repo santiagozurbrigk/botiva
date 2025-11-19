@@ -28,7 +28,7 @@ export default function SuperAdminLayout({ children }) {
           <div className="flex items-center gap-3">
             <button
               onClick={handleLogout}
-              className="p-2 text-gray-500 hover:text-gray-700 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+              className="p-2 text-gray-500 hover:text-gray-700 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#009fee]/40"
               title="Cerrar sesión"
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -37,7 +37,7 @@ export default function SuperAdminLayout({ children }) {
             </button>
             <button
               onClick={toggleSidebar}
-              className="p-2 text-gray-500 hover:text-gray-700 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+              className="p-2 text-gray-500 hover:text-gray-700 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#009fee]/40"
               aria-label="Abrir menú"
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -49,10 +49,10 @@ export default function SuperAdminLayout({ children }) {
       </header>
 
       {/* Sidebar */}
-      <div
+      <aside
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:static lg:translate-x-0`}
+        } lg:translate-x-0 lg:fixed lg:z-30`}
       >
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
@@ -64,7 +64,7 @@ export default function SuperAdminLayout({ children }) {
             </div>
             <button
               onClick={closeSidebar}
-              className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+              className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#009fee]/40"
               aria-label="Cerrar menú"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -79,7 +79,7 @@ export default function SuperAdminLayout({ children }) {
               onClick={closeSidebar}
               className={`flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors ${
                 location.pathname === '/super-admin'
-                  ? 'bg-indigo-50 text-indigo-600'
+                  ? 'bg-[#e0f5ff] text-[#009fee]'
                   : 'text-gray-700 hover:bg-gray-50'
               }`}
             >
@@ -102,7 +102,7 @@ export default function SuperAdminLayout({ children }) {
               </div>
               <button
                 onClick={handleLogout}
-                className="ml-2 p-2 text-gray-400 hover:text-gray-600 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+                className="ml-2 p-2 text-gray-400 hover:text-gray-600 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#009fee]/40"
                 title="Cerrar sesión"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -112,7 +112,7 @@ export default function SuperAdminLayout({ children }) {
             </div>
           </div>
         </div>
-      </div>
+      </aside>
 
       {/* Overlay */}
       {isSidebarOpen && (
