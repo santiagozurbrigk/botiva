@@ -188,6 +188,20 @@ const navSections = [
   { id: 'historias', label: 'Historias' },
 ];
 
+// Funciones auxiliares para uso global
+const handleDownloadDossier = () => {
+  const link = document.createElement('a');
+  link.href = dossierPdf;
+  link.download = 'BOTIVA - DOSSIER.pdf';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+const handleWhatsAppClick = () => {
+  window.open('https://wa.link/063ekg', '_blank');
+};
+
 const Layout = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -217,19 +231,6 @@ const Layout = () => {
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location, navigate, scrollToSection]);
-
-  const handleDownloadDossier = () => {
-    const link = document.createElement('a');
-    link.href = dossierPdf;
-    link.download = 'BOTIVA - DOSSIER.pdf';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleWhatsAppClick = () => {
-    window.open('https://wa.link/063ekg', '_blank');
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary-tint via-white to-white text-ink">
