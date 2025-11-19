@@ -570,7 +570,7 @@ const HomePage = () => (
       </div>
     </section>
 
-    <section className="bg-gradient-to-r from-ink to-primary-dark py-20 text-white">
+    {/* <section className="bg-gradient-to-r from-ink to-primary-dark py-20 text-white">
       <div className="mx-auto flex max-w-5xl flex-col items-center gap-6 px-6 text-center">
         <p className="tag-pill border-white/30 bg-white/10 text-white">Listo para tu cadena</p>
         <h2 className="font-display text-4xl font-semibold leading-snug">
@@ -586,7 +586,7 @@ const HomePage = () => (
           </button>
         </div>
       </div>
-    </section>
+    </section> */}
   </main>
 );
 
