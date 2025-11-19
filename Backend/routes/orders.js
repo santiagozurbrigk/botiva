@@ -25,6 +25,17 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
 
+    // Validar que items es un array
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'items debe ser un array con al menos un elemento' });
+    }
+
+    // Validar que total_amount es un número válido
+    const parsedTotalAmount = parseFloat(total_amount);
+    if (isNaN(parsedTotalAmount) || parsedTotalAmount <= 0) {
+      return res.status(400).json({ error: 'total_amount debe ser un número mayor a 0' });
+    }
+
     // Si es pedido de delivery (n8n), external_id es requerido
     if ((!order_type || order_type === 'delivery') && !external_id) {
       return res.status(400).json({ error: 'external_id es requerido para pedidos de delivery' });
@@ -104,7 +115,7 @@ router.post('/', async (req, res) => {
       customer_name,
       customer_phone,
       customer_address: customer_address || null,
-      total_amount,
+      total_amount: parsedTotalAmount, // Usar el número parseado
       payment_method: payment_method || null,
       status: 'pendiente',
       order_type: finalOrderType,
@@ -173,10 +184,12 @@ router.post('/', async (req, res) => {
   } catch (error) {
     console.error('Error creating order:', error);
     console.error('Request body:', JSON.stringify(req.body, null, 2));
+    console.error('Error stack:', error.stack);
     const errorMessage = error.message || 'Error al crear pedido';
     res.status(500).json({ 
       error: errorMessage,
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      details: error.stack || error.toString(),
+      requestBody: req.body
     });
   }
 });
