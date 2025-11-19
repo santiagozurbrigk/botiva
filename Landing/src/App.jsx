@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { Link, NavLink, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import logo from './assets/logo.png';
+import dossierPdf from './assets/BOTIVA - DOSSIER.pdf';
 
 const stats = [
   { label: 'Pedidos diarios automatizados', value: '+200' },
@@ -217,6 +218,19 @@ const Layout = () => {
     }
   }, [location, navigate, scrollToSection]);
 
+  const handleDownloadDossier = () => {
+    const link = document.createElement('a');
+    link.href = dossierPdf;
+    link.download = 'BOTIVA - DOSSIER.pdf';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleWhatsAppClick = () => {
+    window.open('https://wa.link/063ekg', '_blank');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary-tint via-white to-white text-ink">
       <header className="relative mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
@@ -252,7 +266,7 @@ const Layout = () => {
         </div>
 
         <div className="hidden md:block">
-          <button className="btn-primary text-sm">Agenda una demo</button>
+          <button onClick={handleWhatsAppClick} className="btn-primary text-sm">Agenda una demo</button>
         </div>
 
         <button
@@ -303,7 +317,7 @@ const Layout = () => {
             >
               Módulos <span>↗</span>
             </NavLink>
-            <button className="btn-primary w-full justify-center">Agenda una demo</button>
+            <button onClick={handleWhatsAppClick} className="btn-primary w-full justify-center">Agenda una demo</button>
           </div>
         </div>
       </header>
@@ -425,8 +439,8 @@ const HomePage = () => (
           cierre del día, todo fluye sin fricción.
         </p>
         <div className="flex flex-wrap gap-4">
-          <button className="btn-primary">Quiero ver Botiva</button>
-          <button className="inline-flex items-center gap-2 rounded-full border border-ink/10 px-6 py-3 font-semibold text-ink transition hover:border-primary/40 hover:text-primary">
+          <button onClick={handleWhatsAppClick} className="btn-primary">Quiero ver Botiva</button>
+          <button onClick={handleDownloadDossier} className="inline-flex items-center gap-2 rounded-full border border-ink/10 px-6 py-3 font-semibold text-ink transition hover:border-primary/40 hover:text-primary">
             Descargar dossier
         </button>
         </div>
@@ -580,8 +594,8 @@ const HomePage = () => (
           Botiva es el socio invisible que transforma el caos operativo en resultados medibles.
         </p>
         <div className="flex flex-wrap justify-center gap-4">
-          <button className="btn-primary bg-white text-ink hover:bg-white/90">Agenda una demo</button>
-          <button className="inline-flex items-center gap-2 rounded-full border border-white/30 px-6 py-3 font-semibold text-white transition hover:border-white hover:bg-white/10">
+          <button onClick={handleWhatsAppClick} className="btn-primary bg-white text-ink hover:bg-white/90">Agenda una demo</button>
+          <button onClick={handleWhatsAppClick} className="inline-flex items-center gap-2 rounded-full border border-white/30 px-6 py-3 font-semibold text-white transition hover:border-white hover:bg-white/10">
             Hablar con un especialista
           </button>
         </div>
@@ -603,7 +617,7 @@ const ModulesPage = () => (
         <Link to="/" className="btn-primary">
           Volver al sitio principal
         </Link>
-        <button className="inline-flex items-center gap-2 rounded-full border border-ink/10 px-6 py-3 font-semibold text-ink transition hover:border-primary/40 hover:text-primary">
+        <button onClick={handleWhatsAppClick} className="inline-flex items-center gap-2 rounded-full border border-ink/10 px-6 py-3 font-semibold text-ink transition hover:border-primary/40 hover:text-primary">
           Agendar recorrido guiado
         </button>
       </div>
@@ -629,7 +643,7 @@ const ModulesPage = () => (
               ))}
             </ul>
             <div className="flex flex-wrap gap-3 pt-4">
-              <button className="btn-primary text-sm">Ver demo en vivo</button>
+              <button onClick={handleWhatsAppClick} className="btn-primary text-sm">Ver demo en vivo</button>
               <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
                 Ver resumen ↗
               </Link>
