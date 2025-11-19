@@ -10,19 +10,19 @@ const stats = [
 
 const features = [
   {
-    title: 'Pedidos sin fricción',
+    title: 'Bot automático de WhatsApp',
     description:
-      'WhatsApp, paneles y automatizaciones trabajan juntos para registrar cada orden sin intervención manual.',
+      'Recibe y procesa pedidos 24/7 sin intervención manual. El bot entiende lenguaje natural, identifica productos, calcula totales y confirma automáticamente con el cliente.',
   },
   {
     title: 'Operación sincronizada',
     description:
-      'Administradores, cocina, meseros y repartidores ven exactamente lo que deben hacer en cada momento.',
+      'Administradores, cocina, mozos y repartidores ven exactamente lo que deben hacer en cada momento. Todo se actualiza en tiempo real sin demoras.',
   },
   {
-    title: 'Indicadores accionables',
+    title: 'Control financiero completo',
     description:
-      'Dashboards financieros en tiempo real para decidir rápido sobre ventas, costos y desempeño por sucursal.',
+      'Dashboards con métricas en tiempo real: ventas diarias, semanales y mensuales. Análisis de productos más vendidos, horarios pico y rendimiento de cada equipo.',
   },
 ];
 
@@ -35,24 +35,38 @@ const moduleSummaries = [
     ],
   },
   {
-    title: 'Administración del Restaurante',
+    title: 'Panel de Administración',
     points: [
-      'Gestiona menú, pedidos, stock y repartidores desde cualquier dispositivo',
-      'Comunicación automática con clientes en cada estado del pedido',
+      'Gestiona menú, pedidos, mozos, repartidores y stock desde cualquier dispositivo',
+      'Dashboard financiero con ventas, estadísticas y análisis de rendimiento en tiempo real',
     ],
   },
   {
-    title: 'Cocina y Salón',
+    title: 'Panel de Cocina',
     points: [
-      'Pantallas enfocadas con tiempos, notas y priorización automática',
-      'Comandas digitales sin papelitos ni radios',
+      'Recibe comandas automáticamente con notificaciones de sonido',
+      'Desliza comandas: izquierda (listo) o derecha (cancelar). Actualización en tiempo real',
     ],
   },
   {
-    title: 'Repartidores y Formularios Públicos',
+    title: 'Panel para Mozos',
     points: [
-      'Panel móvil para entregas, cobros y confirmaciones',
-      'Links públicos con restaurant_id para stock y operaciones externas',
+      'Crea comandas digitales desde el panel móvil',
+      'Ve solo sus mesas asignadas y comandas realizadas. Envío automático a cocina y administración',
+    ],
+  },
+  {
+    title: 'Panel para Repartidores',
+    points: [
+      'Panel móvil para ver pedidos asignados, actualizar estados y registrar cobros',
+      'Información completa: dirección, teléfono del cliente, productos y monto a cobrar',
+    ],
+  },
+  {
+    title: 'Gestión de Stock',
+    points: [
+      'Cocina envía pedidos de stock necesarios al panel administrativo',
+      'Visualización centralizada de todos los pedidos con fecha, horario, nombre y plaza',
     ],
   },
 ];
@@ -98,42 +112,72 @@ const moduleDetails = [
   },
   {
     id: 'admin',
-    title: 'Panel del Administrador',
+    title: 'Panel de Administración',
     description:
-      'Gestiona menú, pedidos, promociones, repartidores y finanzas desde una sola vista pensada para la operación diaria.',
+      'Gestiona menú, pedidos, mozos, repartidores, stock y finanzas desde una sola vista pensada para la operación diaria.',
     highlights: [
-      'Órdenes en vivo con filtros y asignación de repartidores.',
-      'Control de inventario y pedidos de stock en un clic.',
-      'Métricas financieras para tomar decisiones sin esperar reportes.',
+      'Órdenes en vivo con filtros, asignación de repartidores y edición de pedidos.',
+      'Control de stock: recibe pedidos desde cocina con fecha, horario, nombre y plaza.',
+      'Dashboard financiero: ventas diarias/semanales/mensuales, productos más vendidos, horarios pico, rendimiento de mozos, repartidores y cocina.',
     ],
     accent: 'from-primary/15 via-white to-primary-light/10',
     variant: 'admin',
   },
   {
     id: 'kitchen',
-    title: 'Pantalla de Cocina y Salón',
+    title: 'Panel de Cocina',
     description:
-      'Muestra solo lo que el equipo necesita: pedidos priorizados, notas y tiempos de entrega para eliminar confusiones.',
+      'La cocina recibe comandas automáticamente con notificaciones de sonido. Sistema de deslizamiento intuitivo para marcar pedidos como listos o cancelados.',
     highlights: [
-      'Modo cocina con tarjetas grandes y colores por estado.',
-      'Comandas digitales para meseros sin papelitos ni radios.',
-      'Actualizaciones inmediatas sincronizadas con el administrador.',
+      'Actualización en tiempo real: comandas llegan automáticamente cuando se crean.',
+      'Notificaciones de sonido para alertar sobre nuevas comandas.',
+      'Sistema de deslizamiento: desliza izquierda (pedido listo) o derecha (cancelar).',
+      'Información completa: nombre del mozo, mesa, horario, pedido y descripción.',
     ],
     accent: 'from-ink/5 via-white to-primary/5',
     variant: 'kitchen',
   },
   {
-    id: 'riders',
-    title: 'Panel de Repartidores y Formularios Públicos',
+    id: 'waiters',
+    title: 'Panel para Mozos',
     description:
-      'Cada repartidor ve su ruta, confirma cobros y reporta entregas. Los formularios externos garantizan que todo llegue con restaurant_id correcto.',
+      'Cada mozo tiene acceso independiente para crear comandas digitales, ver sus mesas asignadas y gestionar pedidos de consumo en local.',
     highlights: [
-      'Panel móvil ligero para ver pedidos asignados y marcar estados.',
-      'Confirmación de cobros en efectivo y liquidaciones diarias.',
-      'Formularios de stock o cocina con enlaces únicos por restaurante.',
+      'Creación de comandas digitales desde el panel móvil.',
+      'Vista personalizada: solo ve las mesas asignadas y comandas realizadas.',
+      'Envío automático: comandas se envían automáticamente a cocina y administración.',
+      'Sincronización en tiempo real con el resto del sistema.',
     ],
     accent: 'from-primary/10 via-white to-accent/20',
     variant: 'rider',
+  },
+  {
+    id: 'riders',
+    title: 'Panel de Repartidores',
+    description:
+      'Cada repartidor ve solo sus pedidos asignados, actualiza estados de entrega y registra métodos de pago desde su panel móvil.',
+    highlights: [
+      'Panel móvil ligero para ver pedidos asignados y marcar estados.',
+      'Información completa: dirección, teléfono del cliente, productos y monto a cobrar.',
+      'Confirmación de cobros: registra efectivo, tarjeta o transferencia.',
+      'Historial personal de entregas del día, semana o mes.',
+    ],
+    accent: 'from-primary/10 via-white to-accent/20',
+    variant: 'rider',
+  },
+  {
+    id: 'stock',
+    title: 'Gestión de Stock',
+    description:
+      'Sistema centralizado donde la cocina envía pedidos de stock necesarios y el administrador visualiza todos los requerimientos en un solo lugar.',
+    highlights: [
+      'Pedidos desde cocina: cada plaza puede solicitar stock necesario con descripción.',
+      'Visualización centralizada: todos los pedidos con fecha, horario, nombre y plaza.',
+      'Control total: saber en todo momento qué está en falta y qué hay que pedir.',
+      'Historial completo de solicitudes de stock.',
+    ],
+    accent: 'from-primary/10 to-white',
+    variant: 'admin',
   },
 ];
 
@@ -401,7 +445,7 @@ const HomePage = () => (
           <span>24/7</span>
         </div>
         <div className="mt-10 space-y-4">
-          {['Pedido recibido', 'Cocina prioriza', 'Repartidor asignado', 'Cliente notificado'].map((step, index) => (
+          {['Bot recibe pedido por WhatsApp', 'Bot procesa y confirma automáticamente', 'Pedido aparece en panel de administración', 'Mozo crea comanda o se asigna repartidor', 'Cocina recibe comanda con notificación', 'Cocina marca como listo deslizando', 'Repartidor entrega y registra cobro', 'Pedido completado en estadísticas'].map((step, index) => (
             <div
               key={step}
               className="flex items-center justify-between rounded-2xl border border-primary/10 bg-primary-tint/60 px-4 py-3"
@@ -415,7 +459,7 @@ const HomePage = () => (
           ))}
         </div>
         <p className="mt-8 text-sm text-ink/60">
-          Cada pedido sigue este recorrido automáticamente, sin depender de interminables chats o capturistas manuales.
+          Cada pedido sigue este recorrido automáticamente desde WhatsApp hasta la entrega, sin intervención manual en la recepción.
         </p>
       </div>
     </section>
@@ -443,10 +487,12 @@ const HomePage = () => (
               </h2>
             </div>
             <ul className="space-y-3 text-base leading-relaxed text-white/80">
-              <li>Pedidos que llegan por WhatsApp y se pierden: ahora viven en un panel único.</li>
-              <li>Repartidores sin visibilidad: cada uno tiene su tablero con tareas del día.</li>
-              <li>Cocinas saturadas: reciben solo lo que deben preparar, con prioridades claras.</li>
-              <li>Dueños sin datos: dashboards financieros en tiempo real para cada sucursal.</li>
+              <li>Pedidos que llegan por WhatsApp y se pierden: el bot los recibe automáticamente 24/7 y los organiza en un panel único.</li>
+              <li>Mozos sin herramientas digitales: ahora crean comandas desde su panel y se envían automáticamente a cocina.</li>
+              <li>Cocinas saturadas: reciben comandas automáticamente con notificaciones, sistema intuitivo de deslizamiento para marcar listos.</li>
+              <li>Repartidores sin visibilidad: cada uno tiene su tablero con pedidos asignados y control de cobros.</li>
+              <li>Stock descontrolado: cocina solicita lo necesario y administración ve todo centralizado.</li>
+              <li>Dueños sin datos: dashboards financieros en tiempo real con rendimiento de mozos, repartidores y cocina.</li>
             </ul>
           </div>
         </div>
@@ -464,7 +510,7 @@ const HomePage = () => (
             Ver módulos en acción
           </Link>
         </div>
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {moduleSummaries.map((module) => (
             <div key={module.title} className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur">
               <h3 className="font-display text-2xl font-semibold">{module.title}</h3>
@@ -489,8 +535,8 @@ const HomePage = () => (
             <p className="tag-pill bg-primary-tint text-primary">Resultados medibles</p>
             <h2 className="mt-4 font-display text-4xl font-semibold text-ink">Beneficios tangibles desde el día uno.</h2>
             <p className="mt-4 text-lg text-ink/70">
-              Botiva sincroniza todo el negocio, reduciendo tiempos operativos, eliminando errores y haciendo visible cada
-              peso.
+              Botiva sincroniza todo el negocio: bot automático de WhatsApp, paneles para administración, cocina, mozos y repartidores. 
+              Reduciendo tiempos operativos, eliminando errores y haciendo visible cada peso con dashboards financieros en tiempo real.
             </p>
           </div>
           <ul className="space-y-4 rounded-3xl border border-ink/5 bg-ink/2 p-6 text-lg text-ink/80">
@@ -550,8 +596,8 @@ const ModulesPage = () => (
       <p className="tag-pill bg-primary-tint text-primary">Explora cada módulo</p>
       <h1 className="mt-5 font-display text-5xl font-semibold text-ink">La plataforma completa, en imágenes reales.</h1>
       <p className="mt-4 text-lg text-ink/70">
-        Recorre cada panel del ecosistema Botiva y descubre cómo se ve la operación en vivo para administradores,
-        cocina, repartidores y equipos de expansión de cadenas.
+        Recorre cada panel del ecosistema Botiva y descubre cómo se ve la operación en vivo: bot automático de WhatsApp, 
+        administradores, cocina, mozos, repartidores y equipos de expansión de cadenas.
       </p>
       <div className="mt-8 flex flex-wrap justify-center gap-4">
         <Link to="/" className="btn-primary">
