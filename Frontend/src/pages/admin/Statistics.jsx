@@ -9,6 +9,7 @@ export default function Statistics() {
   const [error, setError] = useState(null);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [salesPeriod, setSalesPeriod] = useState('day'); // 'day', 'week', 'month'
 
   useEffect(() => {
     fetchStatistics();
@@ -46,6 +47,34 @@ export default function Statistics() {
     return new Date(dateString).toLocaleDateString('es-AR');
   };
 
+  const formatHour = (hour) => {
+    return `${hour.toString().padStart(2, '0')}:00`;
+  };
+
+  const formatPeriod = (period) => {
+    if (salesPeriod === 'week') {
+      const [year, week] = period.split('-W');
+      return `Semana ${week} ${year}`;
+    } else if (salesPeriod === 'month') {
+      const [year, month] = period.split('-');
+      const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      return `${monthNames[parseInt(month) - 1]} ${year}`;
+    }
+    return formatDate(period);
+  };
+
+  const getSalesData = () => {
+    if (!statistics) return [];
+    const { financial } = statistics;
+    
+    if (salesPeriod === 'week') {
+      return Object.values(financial.salesByWeek || {}).sort((a, b) => a.period.localeCompare(b.period));
+    } else if (salesPeriod === 'month') {
+      return Object.values(financial.salesByMonth || {}).sort((a, b) => a.period.localeCompare(b.period));
+    }
+    return Object.values(financial.salesByDay || {}).sort((a, b) => new Date(a.date) - new Date(b.date));
+  };
+
   // Componente para gráfico de barras simple
   const BarChart = ({ data, maxValue, labelKey, valueKey, color = 'bg-indigo-600' }) => {
     if (!data || data.length === 0) return <p className="text-gray-500">No hay datos</p>;
@@ -76,7 +105,7 @@ export default function Statistics() {
   };
 
   // Componente para gráfico de líneas simple
-  const LineChart = ({ data, labelKey, valueKey, color = 'indigo' }) => {
+  const LineChart = ({ data, labelKey, valueKey, color = 'indigo', formatLabel }) => {
     if (!data || data.length === 0) return <p className="text-gray-500">No hay datos</p>;
     
     const values = data.map(item => item[valueKey] || 0);
@@ -112,9 +141,11 @@ export default function Statistics() {
           })}
         </svg>
         <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-gray-500 px-2">
-          {data.slice(0, 5).map((item, index) => (
-            <span key={index}>{formatDate(item[labelKey]).slice(0, 5)}</span>
-          ))}
+          {data.slice(0, Math.min(5, data.length)).map((item, index) => {
+            const label = item[labelKey];
+            const formattedLabel = formatLabel ? formatLabel(label) : (labelKey === 'date' ? formatDate(label).slice(0, 5) : label);
+            return <span key={index}>{formattedLabel}</span>;
+          })}
         </div>
       </div>
     );
@@ -209,14 +240,96 @@ export default function Statistics() {
         </div>
       </div>
 
-      {/* Gráfico de Ventas por Día */}
+      {/* Gráfico de Ventas */}
       <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Ventas por Día</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 sm:mb-0">
+            Análisis de Ventas
+          </h2>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSalesPeriod('day')}
+              className={`px-4 py-2 rounded-md text-sm font-medium ${
+                salesPeriod === 'day'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Por Día
+            </button>
+            <button
+              onClick={() => setSalesPeriod('week')}
+              className={`px-4 py-2 rounded-md text-sm font-medium ${
+                salesPeriod === 'week'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Por Semana
+            </button>
+            <button
+              onClick={() => setSalesPeriod('month')}
+              className={`px-4 py-2 rounded-md text-sm font-medium ${
+                salesPeriod === 'month'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Por Mes
+            </button>
+          </div>
+        </div>
         <LineChart
-          data={Object.values(financial.salesByDay).sort((a, b) => new Date(a.date) - new Date(b.date))}
-          labelKey="date"
+          data={getSalesData()}
+          labelKey={salesPeriod === 'day' ? 'date' : 'period'}
           valueKey="total"
+          formatLabel={salesPeriod === 'day' ? undefined : formatPeriod}
         />
+      </div>
+
+      {/* Horarios Pico */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Horarios Pico</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3 className="text-md font-medium text-gray-700 mb-3">Pedidos por Hora del Día</h3>
+            <BarChart
+              data={Object.values(business.ordersByHour || {})
+                .sort((a, b) => a.hour - b.hour)
+                .map(h => ({ label: formatHour(h.hour), value: h.count }))}
+              maxValue={Math.max(...Object.values(business.ordersByHour || {}).map(h => h.count || 0), 1)}
+              labelKey="label"
+              valueKey="value"
+              color="bg-blue-600"
+            />
+            {business.peakHours && business.peakHours.length > 0 && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm font-medium text-blue-900">
+                  Horarios con más pedidos: {business.peakHours.map(h => formatHour(h)).join(', ')}
+                </p>
+              </div>
+            )}
+          </div>
+          <div>
+            <h3 className="text-md font-medium text-gray-700 mb-3">Horarios Pico de Cocina</h3>
+            <BarChart
+              data={Object.values(kitchen.ordersByHour || {})
+                .sort((a, b) => a.hour - b.hour)
+                .map(h => ({ label: formatHour(h.hour), value: h.count }))}
+              maxValue={Math.max(...Object.values(kitchen.ordersByHour || {}).map(h => h.count || 0), 1)}
+              labelKey="label"
+              valueKey="value"
+              color="bg-orange-600"
+            />
+            {kitchen.peakHours && kitchen.peakHours.length > 0 && (
+              <div className="mt-4 p-3 bg-orange-50 rounded-lg">
+                <p className="text-sm font-medium text-orange-900">
+                  Horarios con más pedidos de cocina: {kitchen.peakHours.map(h => formatHour(h)).join(', ')}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Estadísticas del Negocio */}
@@ -252,32 +365,39 @@ export default function Statistics() {
       {/* Estadísticas de Mozos */}
       <div className="bg-white shadow rounded-lg p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Rendimiento de Mozos</h2>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mozo</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Comandas</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Completadas</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ingresos</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket Promedio</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tiempo Promedio (min)</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {waiters.map((waiter) => (
-                <tr key={waiter.id}>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{waiter.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{waiter.totalComandas}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{waiter.completedComandas}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(waiter.totalRevenue)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(waiter.averageOrderValue)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{waiter.averageTime}</td>
+        {waiters && waiters.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mozo</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Comandas</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Completadas</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ingresos</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket Promedio</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tiempo Promedio (min)</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {waiters.map((waiter) => (
+                  <tr key={waiter.id}>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                      {waiter.name}
+                      {!waiter.active && <span className="ml-2 text-xs text-gray-400">(Inactivo)</span>}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{waiter.totalComandas}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{waiter.completedComandas}</td>
+                    <td className="px-4 py-3 text-sm font-semibold text-green-600">{formatCurrency(waiter.totalRevenue)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(waiter.averageOrderValue)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{waiter.averageTime} min</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-gray-500">No hay mozos registrados</p>
+        )}
       </div>
 
       {/* Estadísticas de Cocina */}
@@ -304,46 +424,57 @@ export default function Statistics() {
           </div>
         </div>
         <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Productos Más Pedidos</h2>
-          <BarChart
-            data={kitchen.mostOrderedItems}
-            maxValue={Math.max(...kitchen.mostOrderedItems.map(i => i.quantity), 1)}
-            labelKey="name"
-            valueKey="quantity"
-            color="bg-orange-600"
-          />
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Productos Más Pedidos en Cocina</h2>
+          {kitchen.mostOrderedItems && kitchen.mostOrderedItems.length > 0 ? (
+            <BarChart
+              data={kitchen.mostOrderedItems}
+              maxValue={Math.max(...kitchen.mostOrderedItems.map(i => i.quantity), 1)}
+              labelKey="name"
+              valueKey="quantity"
+              color="bg-orange-600"
+            />
+          ) : (
+            <p className="text-gray-500">No hay datos disponibles</p>
+          )}
         </div>
       </div>
 
       {/* Estadísticas de Repartidores */}
       <div className="bg-white shadow rounded-lg p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Rendimiento de Repartidores</h2>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Repartidor</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entregas</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Completadas</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ingresos</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket Promedio</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tiempo Promedio (min)</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {riders.map((rider) => (
-                <tr key={rider.id}>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{rider.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{rider.totalDeliveries}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{rider.completedDeliveries}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(rider.totalRevenue)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(rider.averageOrderValue)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{rider.averageDeliveryTime}</td>
+        {riders && riders.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Repartidor</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entregas</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Completadas</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ingresos</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket Promedio</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tiempo Promedio (min)</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {riders.map((rider) => (
+                  <tr key={rider.id}>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                      {rider.name}
+                      {!rider.active && <span className="ml-2 text-xs text-gray-400">(Inactivo)</span>}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{rider.totalDeliveries}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{rider.completedDeliveries}</td>
+                    <td className="px-4 py-3 text-sm font-semibold text-green-600">{formatCurrency(rider.totalRevenue)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(rider.averageOrderValue)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{rider.averageDeliveryTime} min</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-gray-500">No hay repartidores registrados</p>
+        )}
       </div>
 
       {/* Estadísticas de Productos */}
@@ -362,14 +493,37 @@ export default function Statistics() {
           </div>
         </div>
         <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Top 10 Productos Más Vendidos</h2>
-          <BarChart
-            data={products.topProducts}
-            maxValue={Math.max(...products.topProducts.map(p => p.quantity), 1)}
-            labelKey="name"
-            valueKey="quantity"
-            color="bg-purple-600"
-          />
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Productos Más Vendidos</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ingresos</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {products.topProducts.length > 0 ? (
+                  products.topProducts.map((product, index) => (
+                    <tr key={product.id || index}>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{product.name}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{product.quantity}</td>
+                      <td className="px-4 py-3 text-sm font-semibold text-green-600">
+                        {formatCurrency(product.revenue || 0)}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="3" className="px-4 py-3 text-sm text-gray-500 text-center">
+                      No hay productos vendidos en este período
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

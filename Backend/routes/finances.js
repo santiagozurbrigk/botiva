@@ -173,6 +173,29 @@ router.get('/statistics', authenticateAdmin, async (req, res) => {
 
     if (ordersError) throw ordersError;
 
+    // Función auxiliar para obtener semana del año
+    const getWeekNumber = (date) => {
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+      const week1 = new Date(d.getFullYear(), 0, 4);
+      return 1 + Math.round(((d - week1) / 86400000 + week1.getDay() + 1) / 7);
+    };
+
+    // Función auxiliar para obtener año-semana
+    const getYearWeek = (date) => {
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const week = getWeekNumber(d);
+      return `${year}-W${week.toString().padStart(2, '0')}`;
+    };
+
+    // Función auxiliar para obtener año-mes
+    const getYearMonth = (date) => {
+      const d = new Date(date);
+      return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+    };
+
     const financialStats = {
       totalSales: orders
         .filter(o => o.status === 'entregado')
@@ -202,6 +225,28 @@ router.get('/statistics', authenticateAdmin, async (req, res) => {
         }
         return acc;
       }, {}),
+      salesByWeek: orders.reduce((acc, order) => {
+        const yearWeek = getYearWeek(order.created_at);
+        if (!acc[yearWeek]) {
+          acc[yearWeek] = { period: yearWeek, count: 0, total: 0 };
+        }
+        if (order.status === 'entregado') {
+          acc[yearWeek].count++;
+          acc[yearWeek].total += parseFloat(order.total_amount || 0);
+        }
+        return acc;
+      }, {}),
+      salesByMonth: orders.reduce((acc, order) => {
+        const yearMonth = getYearMonth(order.created_at);
+        if (!acc[yearMonth]) {
+          acc[yearMonth] = { period: yearMonth, count: 0, total: 0 };
+        }
+        if (order.status === 'entregado') {
+          acc[yearMonth].count++;
+          acc[yearMonth].total += parseFloat(order.total_amount || 0);
+        }
+        return acc;
+      }, {}),
     };
 
     // ========== ESTADÍSTICAS DEL NEGOCIO ==========
@@ -226,15 +271,32 @@ router.get('/statistics', authenticateAdmin, async (req, res) => {
         : 0,
       ordersByHour: orders.reduce((acc, o) => {
         const hour = new Date(o.created_at).getHours();
-        acc[hour] = (acc[hour] || 0) + 1;
+        if (!acc[hour]) {
+          acc[hour] = { hour, count: 0, revenue: 0 };
+        }
+        acc[hour].count++;
+        if (o.status === 'entregado') {
+          acc[hour].revenue += parseFloat(o.total_amount || 0);
+        }
         return acc;
       }, {}),
     };
 
+    // Calcular horarios pico después de definir ordersByHour
+    const hoursArray = Object.values(businessStats.ordersByHour);
+    businessStats.peakHours = hoursArray.length === 0 ? [] : (() => {
+      const maxCount = Math.max(...hoursArray.map(h => h.count));
+      return hoursArray
+        .filter(h => h.count === maxCount)
+        .map(h => h.hour)
+        .sort((a, b) => a - b);
+    })();
+
     // ========== ESTADÍSTICAS DE MOZOS ==========
     const { data: waiters, error: waitersError } = await supabaseAdmin
       .from('waiters')
-      .select('id, name, active');
+      .select('id, name, active')
+      .eq('restaurant_id', restaurantId);
 
     if (waitersError) throw waitersError;
 
@@ -288,7 +350,10 @@ router.get('/statistics', authenticateAdmin, async (req, res) => {
         }, 0) / (kitchenOrders.filter(o => o.status === 'entregado' && o.updated_at).length || 1),
       ordersByHour: kitchenOrders.reduce((acc, o) => {
         const hour = new Date(o.created_at).getHours();
-        acc[hour] = (acc[hour] || 0) + 1;
+        if (!acc[hour]) {
+          acc[hour] = { hour, count: 0 };
+        }
+        acc[hour].count++;
         return acc;
       }, {}),
       mostOrderedItems: orders.reduce((acc, o) => {
@@ -308,10 +373,21 @@ router.get('/statistics', authenticateAdmin, async (req, res) => {
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10);
 
+    // Calcular horarios pico de cocina después de definir ordersByHour
+    const kitchenHoursArray = Object.values(kitchenStats.ordersByHour);
+    kitchenStats.peakHours = kitchenHoursArray.length === 0 ? [] : (() => {
+      const maxCount = Math.max(...kitchenHoursArray.map(h => h.count));
+      return kitchenHoursArray
+        .filter(h => h.count === maxCount)
+        .map(h => h.hour)
+        .sort((a, b) => a - b);
+    })();
+
     // ========== ESTADÍSTICAS DE REPARTIDORES ==========
     const { data: riders, error: ridersError } = await supabaseAdmin
       .from('riders')
-      .select('id, name, active');
+      .select('id, name, active')
+      .eq('restaurant_id', restaurantId);
 
     if (ridersError) throw ridersError;
 
@@ -346,7 +422,8 @@ router.get('/statistics', authenticateAdmin, async (req, res) => {
     // ========== ESTADÍSTICAS DE PRODUCTOS ==========
     const { data: products, error: productsError } = await supabaseAdmin
       .from('products')
-      .select('id, name, price, category, active');
+      .select('id, name, price, category, active')
+      .eq('restaurant_id', restaurantId);
 
     if (productsError) throw productsError;
 
