@@ -1,4 +1,5 @@
 import express from 'express';
+import { sendOrderReadyWebhook } from '../utils/webhook.js';
 
 const router = express.Router();
 
@@ -88,6 +89,14 @@ router.patch('/orders/:id/status', async (req, res) => {
       .single();
 
     if (updateError) throw updateError;
+
+    // Enviar webhook a n8n cuando el estado cambia a "listo para retirar"
+    if (status === 'listo para retirar') {
+      // Enviar webhook de forma asíncrona (no bloquear la respuesta)
+      sendOrderReadyWebhook(updatedOrder).catch(err => {
+        console.error('Error al enviar webhook (no crítico):', err);
+      });
+    }
 
     res.json(updatedOrder);
   } catch (error) {

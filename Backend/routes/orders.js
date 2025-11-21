@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticateAdmin, authenticateRider, authenticateWaiter } from '../middleware/auth.js';
+import { sendOrderReadyWebhook } from '../utils/webhook.js';
 
 const router = express.Router();
 
@@ -357,6 +358,14 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
         description: eventDescription,
       });
 
+    // Enviar webhook a n8n si el estado cambió a "finalizado" (listo para retirar)
+    if (status === 'finalizado') {
+      // Enviar webhook de forma asíncrona (no bloquear la respuesta)
+      sendOrderReadyWebhook(data).catch(err => {
+        console.error('Error al enviar webhook (no crítico):', err);
+      });
+    }
+
     res.json(data);
   } catch (error) {
     console.error('Error updating order:', error);
@@ -494,6 +503,14 @@ router.put('/:id/full', authenticateAdmin, async (req, res) => {
         event_type: 'updated',
         description: 'Pedido editado completamente',
       });
+
+    // Enviar webhook a n8n si el estado cambió a "finalizado" (listo para retirar)
+    if (status === 'finalizado') {
+      // Enviar webhook de forma asíncrona (no bloquear la respuesta)
+      sendOrderReadyWebhook(updatedOrder).catch(err => {
+        console.error('Error al enviar webhook (no crítico):', err);
+      });
+    }
 
     res.json(updatedOrder);
   } catch (error) {

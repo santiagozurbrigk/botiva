@@ -5,10 +5,52 @@ const inputData = $input.item.json;
 const pedidoTexto = inputData['T pedido'] || inputData.pedido || inputData['pedido'] || '';
 
 // Obtener datos del cliente (formato n8n con prefijos T y #)
-// IMPORTANTE: Usar los campos sin prefijos primero, luego los con prefijos
+// IMPORTANTE: Priorizar campos con prefijo # primero (formato n8n estándar)
 const customerName = inputData.nombre || inputData['T nombre'] || inputData.customer_name || 'Cliente';
-const chatId = inputData.chat_id || inputData['# chat_id'] || inputData.phone || inputData.telefono || inputData['chat_id'] || '';
-const customerPhone = chatId ? chatId.toString() : '0000000000'; // Si está vacío, usar valor por defecto
+
+// Extraer chat_id - Intentar TODAS las variantes posibles
+// IMPORTANTE: n8n puede usar diferentes formatos, buscar en todos los campos posibles
+let chatId = '';
+
+// Buscar en todas las variantes posibles (con y sin prefijos)
+if (inputData['# chat_id'] && inputData['# chat_id'] !== '' && inputData['# chat_id'] !== '0') {
+  chatId = String(inputData['# chat_id']).trim();
+} else if (inputData.chat_id && inputData.chat_id !== '' && inputData.chat_id !== '0') {
+  chatId = String(inputData.chat_id).trim();
+} else if (inputData.phone && inputData.phone !== '' && inputData.phone !== '0') {
+  chatId = String(inputData.phone).trim();
+} else if (inputData.telefono && inputData.telefono !== '' && inputData.telefono !== '0') {
+  chatId = String(inputData.telefono).trim();
+} else if (inputData.customer_phone && inputData.customer_phone !== '' && inputData.customer_phone !== '0') {
+  chatId = String(inputData.customer_phone).trim();
+}
+
+// Debug: Si no se encontró, intentar buscar en todas las claves del objeto
+if (!chatId || chatId === '' || chatId === '0') {
+  // Buscar cualquier campo que contenga "chat" o "phone" en su nombre
+  for (const key in inputData) {
+    if ((key.toLowerCase().includes('chat') || key.toLowerCase().includes('phone') || key.toLowerCase().includes('telefono')) 
+        && inputData[key] 
+        && String(inputData[key]).trim() !== '' 
+        && String(inputData[key]).trim() !== '0'
+        && String(inputData[key]).trim() !== '0000000000') {
+      chatId = String(inputData[key]).trim();
+      break;
+    }
+  }
+}
+
+// Solo usar valor por defecto si realmente no se encontró ningún chat_id válido
+const customerPhone = (chatId && chatId !== '' && chatId !== '0' && chatId !== '0000000000') ? chatId : '0000000000';
+
+// DEBUG: Descomentar para ver qué valores se están capturando
+// console.log('DEBUG chat_id extraction:', {
+//   'inputData.chat_id': inputData.chat_id,
+//   'inputData["# chat_id"]': inputData['# chat_id'],
+//   'chatId extraído': chatId,
+//   'customerPhone': customerPhone
+// });
+
 const customerAddress = inputData.direccion || inputData['T direccion'] || inputData.address || '';
 const montoTotal = parseFloat(inputData.monto || inputData['# monto'] || inputData.total_amount || 0);
 const paymentMethod = inputData.pago || inputData['T pago'] || inputData.payment_method || 'efectivo';
@@ -129,16 +171,28 @@ const itemsFinales = items.map(item => ({
 }));
 
 // Retornar resultado con TODOS los campos necesarios para el HTTP Request
+// IMPORTANTE: Preservar el chat_id original si existe, solo usar customerPhone si no se encontró
+// Verificar también en inputData original por si acaso se perdió en el proceso
+let finalChatId = customerPhone;
+if (chatId && chatId !== '' && chatId !== '0' && chatId !== '0000000000') {
+  finalChatId = chatId;
+} else if (inputData.chat_id && inputData.chat_id !== '' && inputData.chat_id !== '0' && inputData.chat_id !== '0000000000') {
+  finalChatId = String(inputData.chat_id).trim();
+} else if (inputData['# chat_id'] && inputData['# chat_id'] !== '' && inputData['# chat_id'] !== '0' && inputData['# chat_id'] !== '0000000000') {
+  finalChatId = String(inputData['# chat_id']).trim();
+}
+
 return {
   json: {
     // Mantener todos los campos originales
     ...inputData,
     
     // Datos del cliente (mantener formato original para compatibilidad)
+    // SOBRESCRIBIR con valores procesados para asegurar consistencia
     'T nombre': customerName,
     nombre: customerName,
-    '# chat_id': customerPhone,
-    chat_id: customerPhone,
+    '# chat_id': finalChatId, // Usar el chat_id extraído, no el valor por defecto
+    chat_id: finalChatId, // Usar el chat_id extraído, no el valor por defecto
     'T direccion': customerAddress,
     direccion: customerAddress,
     '# monto': montoTotal,
@@ -159,7 +213,7 @@ return {
     
     // Campos del cliente para el API (sin prefijos)
     customer_name: customerName,
-    customer_phone: customerPhone,
+    customer_phone: finalChatId, // Usar el chat_id extraído como customer_phone
     customer_address: customerAddress,
     payment_method: paymentMethod,
     
