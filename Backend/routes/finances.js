@@ -198,7 +198,7 @@ router.get('/statistics', authenticateAdmin, async (req, res) => {
 
     const financialStats = {
       totalSales: orders
-        .filter(o => o.status === 'entregado')
+        .filter(o => o.payment_status === 'pagado' || o.status === 'entregado' || o.status === 'finalizado')
         .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0),
       pendingPayments: orders
         .filter(o => o.payment_status === 'pendiente')
@@ -209,7 +209,7 @@ router.get('/statistics', authenticateAdmin, async (req, res) => {
       salesByPaymentMethod: orders.reduce((acc, o) => {
         const method = o.payment_method || 'no_definido';
         if (!acc[method]) acc[method] = 0;
-        if (o.status === 'entregado') {
+        if (o.payment_status === 'pagado' || o.status === 'entregado' || o.status === 'finalizado') {
           acc[method] += parseFloat(o.total_amount || 0);
         }
         return acc;
@@ -219,7 +219,7 @@ router.get('/statistics', authenticateAdmin, async (req, res) => {
         if (!acc[date]) {
           acc[date] = { date, count: 0, total: 0 };
         }
-        if (order.status === 'entregado') {
+        if (order.payment_status === 'pagado' || order.status === 'entregado' || order.status === 'finalizado') {
           acc[date].count++;
           acc[date].total += parseFloat(order.total_amount || 0);
         }
@@ -230,7 +230,7 @@ router.get('/statistics', authenticateAdmin, async (req, res) => {
         if (!acc[yearWeek]) {
           acc[yearWeek] = { period: yearWeek, count: 0, total: 0 };
         }
-        if (order.status === 'entregado') {
+        if (order.payment_status === 'pagado' || order.status === 'entregado' || order.status === 'finalizado') {
           acc[yearWeek].count++;
           acc[yearWeek].total += parseFloat(order.total_amount || 0);
         }
@@ -241,7 +241,7 @@ router.get('/statistics', authenticateAdmin, async (req, res) => {
         if (!acc[yearMonth]) {
           acc[yearMonth] = { period: yearMonth, count: 0, total: 0 };
         }
-        if (order.status === 'entregado') {
+        if (order.payment_status === 'pagado' || order.status === 'entregado' || order.status === 'finalizado') {
           acc[yearMonth].count++;
           acc[yearMonth].total += parseFloat(order.total_amount || 0);
         }
