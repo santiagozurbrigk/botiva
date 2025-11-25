@@ -196,16 +196,17 @@ router.get('/statistics', authenticateAdmin, async (req, res) => {
       return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
     };
 
+    // Calcular pagos recibidos (pedidos pagados)
+    const paidAmount = orders
+      .filter(o => o.payment_status === 'pagado')
+      .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
+
     const financialStats = {
-      totalSales: orders
-        .filter(o => o.payment_status === 'pagado' || o.status === 'entregado' || o.status === 'finalizado')
-        .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0),
+      totalSales: paidAmount, // Ventas Totales = Pagos Recibidos (solo pedidos pagados)
       pendingPayments: orders
         .filter(o => o.payment_status === 'pendiente')
         .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0),
-      paidAmount: orders
-        .filter(o => o.payment_status === 'pagado')
-        .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0),
+      paidAmount: paidAmount,
       salesByPaymentMethod: orders.reduce((acc, o) => {
         const method = o.payment_method || 'no_definido';
         if (!acc[method]) acc[method] = 0;

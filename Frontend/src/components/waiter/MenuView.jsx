@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 
 export default function MenuView({ products, extras, onAddProduct, onBack }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [quantities, setQuantities] = useState({});
 
   // Obtener todas las categorías únicas de los productos
@@ -10,13 +11,26 @@ export default function MenuView({ products, extras, onAddProduct, onBack }) {
     return ['all', ...cats];
   }, [products]);
 
-  // Filtrar productos por categoría
+  // Filtrar productos por categoría y búsqueda
   const filteredProducts = useMemo(() => {
-    if (selectedCategory === 'all') {
-      return products;
+    let filtered = products;
+    
+    // Filtrar por categoría
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(p => p.category === selectedCategory);
     }
-    return products.filter(p => p.category === selectedCategory);
-  }, [products, selectedCategory]);
+    
+    // Filtrar por búsqueda
+    if (searchQuery.trim() !== '') {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(p => 
+        p.name.toLowerCase().includes(query) ||
+        (p.description && p.description.toLowerCase().includes(query))
+      );
+    }
+    
+    return filtered;
+  }, [products, selectedCategory, searchQuery]);
 
   const handleQuantityChange = (productId, change) => {
     setQuantities(prev => {
@@ -67,6 +81,35 @@ export default function MenuView({ products, extras, onAddProduct, onBack }) {
           </svg>
           Volver a Comanda
         </button>
+      </div>
+
+      {/* Buscador */}
+      <div className="relative">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Buscar platos..."
+          className="w-full px-4 py-3 pl-10 rounded-lg border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 text-base"
+        />
+        <svg
+          className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Filtros de categoría - Scroll horizontal en móvil */}

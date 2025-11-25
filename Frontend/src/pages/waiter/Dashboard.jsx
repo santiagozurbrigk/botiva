@@ -4,33 +4,101 @@ import { api } from '../../lib/api';
 import MenuView from '../../components/waiter/MenuView';
 
 // Vista de selección de mesas
-function TablesView({ tables, onTableSelect, comandas, onEditComanda }) {
+function TablesView({ tables, onTableSelect, onTableStatusChange, comandas, onEditComanda, tableStatuses }) {
+  const [showTableSelector, setShowTableSelector] = useState(false);
+  // Función para determinar el color de la mesa
+  const getTableColor = (tableNumber) => {
+    const comanda = comandas.find(c => c.table_number === tableNumber);
+    
+    // Si la comanda está pagada, mesa en blanco
+    if (comanda && comanda.payment_status === 'pagado') {
+      return 'bg-white border-2 border-gray-300 text-gray-900 hover:bg-gray-50';
+    }
+    
+    // Si hay estado manual, usar ese
+    if (tableStatuses[tableNumber]) {
+      const status = tableStatuses[tableNumber];
+      if (status === 'pedido_tomado') {
+        return 'bg-yellow-500 hover:bg-yellow-600 text-white';
+      } else if (status === 'pedido_entregado') {
+        return 'bg-green-500 hover:bg-green-600 text-white';
+      }
+    }
+    
+    // Si hay comanda activa (pendiente o en_proceso), amarillo
+    if (comanda && (comanda.status === 'pendiente' || comanda.status === 'en_proceso')) {
+      return 'bg-yellow-500 hover:bg-yellow-600 text-white';
+    }
+    
+    // Si hay comanda finalizada o entregada, verde
+    if (comanda && (comanda.status === 'finalizado' || comanda.status === 'entregado')) {
+      return 'bg-green-500 hover:bg-green-600 text-white';
+    }
+    
+    // Por defecto, blanco
+    return 'bg-white border-2 border-gray-300 text-gray-900 hover:bg-gray-50';
+  };
+
+  // Función para obtener el texto del estado
+  const getTableStatusText = (tableNumber) => {
+    const comanda = comandas.find(c => c.table_number === tableNumber);
+    
+    if (comanda && comanda.payment_status === 'pagado') {
+      return '';
+    }
+    
+    if (tableStatuses[tableNumber]) {
+      const status = tableStatuses[tableNumber];
+      if (status === 'pedido_tomado') {
+        return 'Pedido';
+      } else if (status === 'pedido_entregado') {
+        return 'Entregado';
+      }
+    }
+    
+    if (comanda && (comanda.status === 'pendiente' || comanda.status === 'en_proceso')) {
+      return 'Pedido';
+    }
+    
+    if (comanda && (comanda.status === 'finalizado' || comanda.status === 'entregado')) {
+      return 'Entregado';
+    }
+    
+    return '';
+  };
+
   return (
     <div className="h-full overflow-y-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Tomar Comanda</h1>
-          <p className="mt-1 text-sm text-gray-600">Selecciona una mesa para tomar la comanda</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Tomar Comanda</h1>
+            <p className="mt-1 text-sm text-gray-600">Haz click en una mesa para cambiar su estado</p>
+          </div>
+          <button
+            onClick={() => setShowTableSelector(true)}
+            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 shadow-md"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Nueva Comanda
+          </button>
         </div>
 
         {/* Grid de Mesas */}
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 md:gap-4">
           {tables.map((tableNumber) => {
-            const comanda = comandas.find(c => c.table_number === tableNumber && (c.status === 'pendiente' || c.status === 'en_proceso'));
             return (
               <button
                 key={tableNumber}
-                onClick={() => onTableSelect(tableNumber)}
-                className={`aspect-square rounded-xl shadow-md flex flex-col items-center justify-center text-xl md:text-2xl font-bold transition-all transform hover:scale-105 active:scale-95 ${
-                  comanda
-                    ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                }`}
+                onClick={() => onTableStatusChange(tableNumber)}
+                className={`aspect-square rounded-xl shadow-md flex flex-col items-center justify-center text-xl md:text-2xl font-bold transition-all transform hover:scale-105 active:scale-95 ${getTableColor(tableNumber)}`}
               >
                 <span>{tableNumber}</span>
-                {comanda && (
+                {getTableStatusText(tableNumber) && (
                   <span className="text-xs md:text-sm mt-1 opacity-90">
-                    Activa
+                    {getTableStatusText(tableNumber)}
                   </span>
                 )}
               </button>
@@ -41,6 +109,40 @@ function TablesView({ tables, onTableSelect, comandas, onEditComanda }) {
         {tables.length === 0 && (
           <div className="text-center py-12 bg-yellow-50 rounded-lg">
             <p className="text-yellow-800">No tienes mesas asignadas. Contacta al administrador.</p>
+          </div>
+        )}
+
+        {/* Modal para seleccionar mesa */}
+        {showTableSelector && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Seleccionar Mesa</h2>
+                <button
+                  onClick={() => setShowTableSelector(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">Selecciona una mesa para crear una nueva comanda:</p>
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 max-h-96 overflow-y-auto">
+                {tables.map((tableNumber) => (
+                  <button
+                    key={tableNumber}
+                    onClick={() => {
+                      onTableSelect(tableNumber);
+                      setShowTableSelector(false);
+                    }}
+                    className="aspect-square rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-lg transition-colors shadow-md"
+                  >
+                    {tableNumber}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -587,12 +689,24 @@ export default function WaiterDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('tables'); // 'tables', 'comanda', 'edit'
+  const [tableStatuses, setTableStatuses] = useState({}); // Estado manual de las mesas
 
   // Refrescar comandas cuando se cree o edite una
   const fetchComandas = useCallback(async () => {
     try {
       const data = await api.getMyComandas(token);
       setComandas(data);
+      
+      // Reiniciar estado de mesas cuando se paga una comanda
+      setTableStatuses(prev => {
+        const newStatuses = { ...prev };
+        data.forEach(comanda => {
+          if (comanda.payment_status === 'pagado' && newStatuses[comanda.table_number]) {
+            delete newStatuses[comanda.table_number];
+          }
+        });
+        return newStatuses;
+      });
     } catch (error) {
       console.error('Error fetching comandas:', error);
       setComandas([]);
@@ -650,6 +764,36 @@ export default function WaiterDashboard() {
     });
     setShowMenu(false);
     setView('comanda');
+  };
+
+  // Función para cambiar el estado de una mesa al hacer click
+  const handleTableStatusChange = (tableNumber) => {
+    const comanda = comandas.find(c => c.table_number === tableNumber);
+    
+    // Si la comanda está pagada, no hacer nada (ya está en blanco)
+    if (comanda && comanda.payment_status === 'pagado') {
+      return;
+    }
+    
+    setTableStatuses(prev => {
+      const currentStatus = prev[tableNumber];
+      
+      // Ciclo de estados: blanco -> amarillo -> verde -> blanco
+      if (!currentStatus) {
+        // De blanco a amarillo (pedido tomado)
+        return { ...prev, [tableNumber]: 'pedido_tomado' };
+      } else if (currentStatus === 'pedido_tomado') {
+        // De amarillo a verde (pedido entregado)
+        return { ...prev, [tableNumber]: 'pedido_entregado' };
+      } else if (currentStatus === 'pedido_entregado') {
+        // De verde a blanco (reiniciar)
+        const newStatuses = { ...prev };
+        delete newStatuses[tableNumber];
+        return newStatuses;
+      }
+      
+      return prev;
+    });
   };
 
   const handleBackToTables = () => {
@@ -1002,8 +1146,10 @@ export default function WaiterDashboard() {
         <TablesView
           tables={tables}
           onTableSelect={handleTableClick}
+          onTableStatusChange={handleTableStatusChange}
           comandas={comandas}
           onEditComanda={handleEditComanda}
+          tableStatuses={tableStatuses}
         />
       )}
       
