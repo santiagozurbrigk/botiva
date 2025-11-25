@@ -1,25 +1,62 @@
 import express from 'express';
-import { authenticateAdmin } from '../middleware/auth.js';
+import { authenticateAdmin, authenticateWaiter } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// GET /api/products - Listar productos
-// Nota: Esta ruta puede ser pública (para cocina) o con autenticación (para admin)
-// Si hay token, usar authenticateAdmin para establecer req.restaurantId
-router.get('/', async (req, res, next) => {
-  // Si hay token de autorización, usar el middleware de autenticación primero
+// Middleware para autenticar como admin o mozo
+async function authenticateAdminOrWaiter(req, res, next) {
   const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    // Llamar al middleware de autenticación para establecer req.restaurantId
-    return authenticateAdmin(req, res, () => {
-      // Continuar con el handler después de la autenticación
-      handleGetProducts(req, res);
-    });
-  } else {
-    // Sin token, continuar sin autenticación (acceso público para cocina)
-    handleGetProducts(req, res);
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next(); // Sin token, continuar sin autenticación
   }
-});
+
+  const token = authHeader.substring(7);
+  const { supabaseAdmin } = req.app.locals;
+
+  try {
+    // Intentar autenticar como admin
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    if (userError) {
+      return next(); // Error al obtener usuario, continuar sin autenticación
+    }
+
+    // Intentar obtener admin
+    const { data: admin, error: adminError } = await supabaseAdmin
+      .from('admins')
+      .select('id, restaurant_id')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    if (!adminError && admin) {
+      req.user = { admin };
+      req.restaurantId = admin.restaurant_id;
+      return next();
+    }
+
+    // Si no es admin, intentar obtener mozo
+    const { data: waiter, error: waiterError } = await supabaseAdmin
+      .from('waiters')
+      .select('id, restaurant_id')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    if (!waiterError && waiter) {
+      req.user = { waiter };
+      req.restaurantId = waiter.restaurant_id;
+      return next();
+    }
+
+    // No es ni admin ni mozo, continuar sin autenticación
+    next();
+  } catch (error) {
+    console.error('Error en authenticateAdminOrWaiter:', error);
+    next(); // Continuar sin autenticación en caso de error
+  }
+}
+
+// GET /api/products - Listar productos
+// Nota: Esta ruta puede ser pública (para cocina) o con autenticación (para admin o mozo)
+router.get('/', authenticateAdminOrWaiter, handleGetProducts);
 
 async function handleGetProducts(req, res) {
   try {
