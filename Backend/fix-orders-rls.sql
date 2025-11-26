@@ -41,20 +41,24 @@ END $$;
 -- PASO 3: Asegurar que la política de mozos también permita inserciones
 -- ============================================
 -- Esta política permite que los mozos autenticados creen comandas
+-- IMPORTANTE: Verifica usando la tabla waiters, no profiles
 
 DO $$ 
 BEGIN
   -- Eliminar política existente si existe
   DROP POLICY IF EXISTS "Waiters can create orders" ON orders;
   
-  -- Crear nueva política para mozos
+  -- Crear nueva política para mozos usando la tabla waiters
   CREATE POLICY "Waiters can create orders" ON orders
     FOR INSERT 
     WITH CHECK (
-      waiter_id IN (
-        SELECT id FROM waiters WHERE auth_user_id = auth.uid()
+      -- Verificar que el usuario autenticado es un waiter
+      EXISTS (
+        SELECT 1 FROM waiters 
+        WHERE auth_user_id = auth.uid()
       )
-      OR waiter_id IS NULL  -- Permitir también cuando waiter_id es NULL (para n8n)
+      -- O permitir cuando waiter_id es NULL (para n8n o backend)
+      OR waiter_id IS NULL
     );
 EXCEPTION
   WHEN OTHERS THEN
@@ -62,7 +66,31 @@ EXCEPTION
 END $$;
 
 -- ============================================
--- PASO 4: Verificar políticas existentes
+-- PASO 4: Crear política para admins que puedan insertar
+-- ============================================
+-- Esta política permite que los admins autenticados creen pedidos
+
+DO $$ 
+BEGIN
+  -- Eliminar política existente si existe
+  DROP POLICY IF EXISTS "Admins can insert orders" ON orders;
+  
+  -- Crear nueva política para admins
+  CREATE POLICY "Admins can insert orders" ON orders
+    FOR INSERT 
+    WITH CHECK (
+      EXISTS (
+        SELECT 1 FROM admins 
+        WHERE auth_user_id = auth.uid()
+      )
+    );
+EXCEPTION
+  WHEN OTHERS THEN
+    NULL;
+END $$;
+
+-- ============================================
+-- PASO 5: Verificar políticas existentes
 -- ============================================
 -- Ejecuta esto para ver todas las políticas actuales:
 SELECT 

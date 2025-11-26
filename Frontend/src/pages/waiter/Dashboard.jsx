@@ -752,7 +752,8 @@ export default function WaiterDashboard() {
       fetchExtras();
       fetchComandas();
     }
-  }, [token, fetchTables, fetchProducts, fetchExtras, fetchComandas]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   const handleTableClick = (tableNumber) => {
     setSelectedTable(tableNumber);
@@ -1138,6 +1139,7 @@ export default function WaiterDashboard() {
         layoutHeader.style.display = '';
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
 
   return (
