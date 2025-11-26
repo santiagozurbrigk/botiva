@@ -746,12 +746,32 @@ export default function WaiterDashboard() {
   }, [token]);
 
   useEffect(() => {
-    if (token) {
-      fetchTables();
-      fetchProducts();
-      fetchExtras();
-      fetchComandas();
+    if (!token) {
+      return undefined;
     }
+
+    let isMounted = true;
+
+    const loadData = async () => {
+      try {
+        if (isMounted) {
+          fetchTables();
+          fetchProducts();
+          fetchExtras();
+          fetchComandas();
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Error loading data:', error);
+        }
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
@@ -1105,22 +1125,14 @@ export default function WaiterDashboard() {
     setShowEditMenu(false);
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="text-2xl font-bold text-gray-900">Cargando mesas...</div>
-        </div>
-      </div>
-    );
-  }
-
   // Controlar visibilidad del header del layout según la vista actual
   useEffect(() => {
     // Usar setTimeout para asegurar que el DOM esté listo
     const timer = setTimeout(() => {
       const layoutHeader = document.querySelector('header');
-      if (!layoutHeader) return;
+      if (!layoutHeader) {
+        return;
+      }
 
       if (view === 'tables') {
         // Mostrar header en vista de mesas
@@ -1139,8 +1151,18 @@ export default function WaiterDashboard() {
         layoutHeader.style.display = '';
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
+
+  // Mostrar loading después de todos los hooks (regla de hooks de React)
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-gray-900">Cargando mesas...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
