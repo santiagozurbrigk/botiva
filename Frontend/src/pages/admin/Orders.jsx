@@ -14,6 +14,9 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showConfirmWeightModal, setShowConfirmWeightModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [weightFormData, setWeightFormData] = useState({ items: [], total_amount: '' });
   const [products, setProducts] = useState([]);
   const [extras, setExtras] = useState([]);
   const [formData, setFormData] = useState({
@@ -156,6 +159,48 @@ export default function Orders() {
     } catch (error) {
       console.error('Error updating payment status:', error);
     }
+  };
+
+  const handleOpenConfirmWeight = (order) => {
+    setSelectedOrder(order);
+    // Inicializar formData con los items del pedido
+    const itemsWithWeight = (order.order_items || []).map(item => ({
+      id: item.id,
+      name: item.product_name,
+      weight_kg: item.weight_kg || '',
+    }));
+    setWeightFormData({
+      items: itemsWithWeight,
+      total_amount: order.total_amount > 0 ? order.total_amount : '',
+    });
+    setShowConfirmWeightModal(true);
+  };
+
+  const handleConfirmWeight = async (e) => {
+    e.preventDefault();
+    if (!selectedOrder) return;
+
+    try {
+      await api.confirmOrderWeight(token, selectedOrder.id, {
+        items: weightFormData.items,
+        total_amount: parseFloat(weightFormData.total_amount),
+      });
+      setShowConfirmWeightModal(false);
+      setSelectedOrder(null);
+      setWeightFormData({ items: [], total_amount: '' });
+      // Realtime actualizará automáticamente
+    } catch (error) {
+      console.error('Error confirming weight:', error);
+      alert(error.message || 'Error al confirmar peso del pedido');
+    }
+  };
+
+  const updateItemWeight = (index, weight) => {
+    setWeightFormData(prev => {
+      const newItems = [...prev.items];
+      newItems[index] = { ...newItems[index], weight_kg: weight };
+      return { ...prev, items: newItems };
+    });
   };
 
   const addItem = () => {
@@ -494,13 +539,26 @@ export default function Orders() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {orders.map((order) => (
-                <tr key={order.id}>
+                <tr key={order.id} className={order.pending_weight_confirmation ? 'bg-yellow-50' : ''}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{order.customer_name}</div>
-                    <div className="text-sm text-gray-500">{order.customer_phone}</div>
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{order.customer_name}</div>
+                        <div className="text-sm text-gray-500">{order.customer_phone}</div>
+                      </div>
+                      {order.pending_weight_confirmation && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          ⚖️ Pendiente
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${order.total_amount}
+                    {order.pending_weight_confirmation ? (
+                      <span className="text-gray-400 italic">Pendiente</span>
+                    ) : (
+                      `$${order.total_amount}`
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <CustomSelect
@@ -540,12 +598,22 @@ export default function Orders() {
                     {new Date(order.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <button 
-                      onClick={() => navigate(`/admin/orders/${order.id}`)}
-                      className="text-indigo-600 hover:text-indigo-900"
-                    >
-                      Ver Detalle
-                    </button>
+                    <div className="flex gap-2">
+                      {order.pending_weight_confirmation && (
+                        <button
+                          onClick={() => handleOpenConfirmWeight(order)}
+                          className="text-yellow-600 hover:text-yellow-900 font-medium"
+                        >
+                          Confirmar Peso
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => navigate(`/admin/orders/${order.id}`)}
+                        className="text-indigo-600 hover:text-indigo-900"
+                      >
+                        Ver Detalle
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -782,6 +850,105 @@ export default function Orders() {
                     className="btn-primary text-sm px-6 py-2 rounded-xl disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     Crear Pedido
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para confirmar peso */}
+      {showConfirmWeightModal && selectedOrder && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 px-4">
+          <div className="relative top-6 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-2xl bg-white">
+            <div className="mt-3">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">Confirmar Peso y Total</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Cliente: {selectedOrder.customer_name} - Pedido #{selectedOrder.external_id}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowConfirmWeightModal(false);
+                    setSelectedOrder(null);
+                    setWeightFormData({ items: [], total_amount: '' });
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <form onSubmit={handleConfirmWeight} className="space-y-4">
+                {/* Items con peso */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Productos y Peso (kg)
+                  </label>
+                  <div className="space-y-3 max-h-64 overflow-y-auto border rounded-lg p-3">
+                    {weightFormData.items.length === 0 ? (
+                      <p className="text-sm text-gray-500 text-center py-4">No hay productos en este pedido</p>
+                    ) : (
+                      weightFormData.items.map((item, index) => (
+                        <div key={item.id || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">{item.name}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs text-gray-600">Peso (kg):</label>
+                            <input
+                              type="number"
+                              step="0.001"
+                              min="0"
+                              value={item.weight_kg || ''}
+                              onChange={(e) => updateItemWeight(index, e.target.value)}
+                              className="w-24 px-3 py-1.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 text-sm"
+                              placeholder="0.000"
+                            />
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Total */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Total del Pedido *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    value={weightFormData.total_amount}
+                    onChange={(e) => setWeightFormData({ ...weightFormData, total_amount: e.target.value })}
+                    className="mt-1 block w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors bg-white"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                {/* Botones */}
+                <div className="flex flex-wrap justify-end gap-3 pt-4 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowConfirmWeightModal(false);
+                      setSelectedOrder(null);
+                      setWeightFormData({ items: [], total_amount: '' });
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary text-sm px-6 py-2 rounded-xl"
+                  >
+                    Confirmar Pedido
                   </button>
                 </div>
               </form>

@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateAdmin, authenticateRider, authenticateWaiter } from '../middleware/auth.js';
-import { sendOrderReadyWebhook } from '../utils/webhook.js';
+import { sendOrderReadyWebhook, sendOrderConfirmationWebhook } from '../utils/webhook.js';
 
 const router = express.Router();
 
@@ -22,7 +22,7 @@ router.post('/', async (req, res) => {
     } = req.body;
 
     // Validación básica
-    if (!customer_name || !customer_phone || !items || !total_amount) {
+    if (!customer_name || !customer_phone || !items) {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
 
@@ -31,10 +31,65 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'items debe ser un array con al menos un elemento' });
     }
 
-    // Validar que total_amount es un número válido
-    const parsedTotalAmount = parseFloat(total_amount);
-    if (isNaN(parsedTotalAmount) || parsedTotalAmount <= 0) {
-      return res.status(400).json({ error: 'total_amount debe ser un número mayor a 0' });
+    // Obtener restaurant_id primero para verificar si vende por kilo
+    let restaurantId = null;
+    if (waiter_id) {
+      // Si hay waiter_id, obtener restaurant_id del waiter
+      const { data: waiter } = await supabaseAdmin
+        .from('waiters')
+        .select('restaurant_id')
+        .eq('id', waiter_id)
+        .single();
+      if (waiter) restaurantId = waiter.restaurant_id;
+    } else if (items && items.length > 0 && items[0].product_id) {
+      // Si no hay waiter_id, obtener restaurant_id del primer producto
+      const { data: product } = await supabaseAdmin
+        .from('products')
+        .select('restaurant_id')
+        .eq('id', items[0].product_id)
+        .single();
+      if (product) restaurantId = product.restaurant_id;
+    }
+
+    // Si no se pudo obtener restaurant_id, intentar desde el body (para n8n)
+    if (!restaurantId && req.body.restaurant_id) {
+      restaurantId = req.body.restaurant_id;
+    }
+
+    // Verificar si el restaurante vende por kilo
+    let sellsByWeight = false;
+    if (restaurantId) {
+      const { data: restaurant } = await supabaseAdmin
+        .from('restaurants')
+        .select('sells_by_weight')
+        .eq('id', restaurantId)
+        .single();
+      if (restaurant) {
+        sellsByWeight = restaurant.sells_by_weight || false;
+      }
+    }
+
+    // Validar total_amount según el tipo de restaurante
+    let parsedTotalAmount = 0;
+    let pendingWeightConfirmation = false;
+    
+    if (sellsByWeight) {
+      // Para restaurantes por kilo, total_amount puede ser 0 o null
+      parsedTotalAmount = total_amount ? parseFloat(total_amount) : 0;
+      if (isNaN(parsedTotalAmount)) {
+        parsedTotalAmount = 0;
+      }
+      // Marcar como pendiente de confirmación de peso
+      pendingWeightConfirmation = true;
+    } else {
+      // Para restaurantes normales, total_amount es requerido y debe ser > 0
+      if (!total_amount) {
+        return res.status(400).json({ error: 'total_amount es requerido' });
+      }
+      parsedTotalAmount = parseFloat(total_amount);
+      if (isNaN(parsedTotalAmount) || parsedTotalAmount <= 0) {
+        return res.status(400).json({ error: 'total_amount debe ser un número mayor a 0' });
+      }
     }
 
     // Si es pedido de delivery (n8n), external_id es requerido
@@ -63,51 +118,47 @@ router.post('/', async (req, res) => {
     // Determinar order_type por defecto
     const finalOrderType = order_type || 'delivery';
 
-    // Obtener restaurant_id
-    let restaurantId = null;
-    if (waiter_id) {
-      // Si hay waiter_id, obtener restaurant_id del waiter
-      const { data: waiter } = await supabaseAdmin
-        .from('waiters')
-        .select('restaurant_id')
-        .eq('id', waiter_id)
-        .single();
-      if (waiter) restaurantId = waiter.restaurant_id;
-    } else if (items && items.length > 0 && items[0].product_id) {
-      // Si no hay waiter_id, obtener restaurant_id del primer producto
-      const { data: product } = await supabaseAdmin
-        .from('products')
-        .select('restaurant_id')
-        .eq('id', items[0].product_id)
-        .single();
-      if (product) restaurantId = product.restaurant_id;
-    }
-
-    // Si no se pudo obtener restaurant_id, intentar desde el body (para n8n)
-    if (!restaurantId && req.body.restaurant_id) {
-      restaurantId = req.body.restaurant_id;
-      
-      // Validar que el restaurante existe y está activo
-      const { data: restaurant, error: restaurantError } = await supabaseAdmin
-        .from('restaurants')
-        .select('id, active')
-        .eq('id', restaurantId)
-        .single();
-      
-      if (restaurantError || !restaurant) {
-        return res.status(400).json({ error: 'Restaurante no encontrado' });
-      }
-      
-      if (!restaurant.active) {
-        return res.status(400).json({ error: 'El restaurante está inactivo' });
-      }
-    }
-    
     // Validar que se obtuvo restaurant_id (requerido para multi-tenant)
     if (!restaurantId) {
       return res.status(400).json({ 
         error: 'restaurant_id es requerido. No se pudo determinar el restaurante del pedido.' 
       });
+    }
+
+    // Validar que el restaurante existe y está activo
+    const { data: restaurant, error: restaurantError } = await supabaseAdmin
+      .from('restaurants')
+      .select('id, active, sells_by_weight')
+      .eq('id', restaurantId)
+      .single();
+    
+    if (restaurantError || !restaurant) {
+      return res.status(400).json({ error: 'Restaurante no encontrado' });
+    }
+    
+    if (!restaurant.active) {
+      return res.status(400).json({ error: 'El restaurante está inactivo' });
+    }
+
+    // Actualizar sellsByWeight con el valor real de la base de datos
+    sellsByWeight = restaurant.sells_by_weight || false;
+    
+    // Si es restaurante por kilo y no se proporcionó total_amount, marcar como pendiente
+    if (sellsByWeight && (!total_amount || parseFloat(total_amount) === 0)) {
+      pendingWeightConfirmation = true;
+      parsedTotalAmount = 0;
+    }
+
+    // Extraer chat_id del external_id o usar customer_phone
+    let chatId = null;
+    if (external_id && external_id.includes('_')) {
+      const parts = external_id.split('_');
+      if (parts.length >= 2 && parts[0] && parts[0] !== '0' && parts[0] !== '0000000000') {
+        chatId = parts[0];
+      }
+    }
+    if (!chatId && customer_phone && customer_phone !== '0' && customer_phone !== '0000000000') {
+      chatId = customer_phone;
     }
 
     // Crear el pedido
@@ -121,6 +172,8 @@ router.post('/', async (req, res) => {
       status: 'pendiente',
       order_type: finalOrderType,
       restaurant_id: restaurantId, // Asociar pedido al restaurante
+      pending_weight_confirmation: pendingWeightConfirmation, // Marcar si necesita confirmación de peso
+      chat_id: chatId || null, // ID del chat de WhatsApp para confirmaciones
     };
 
     // Agregar campos opcionales si existen
@@ -798,6 +851,112 @@ router.get('/waiter/me', authenticateWaiter, async (req, res) => {
   } catch (error) {
     console.error('Error fetching waiter comandas:', error);
     res.status(500).json({ error: 'Error al obtener comandas' });
+  }
+});
+
+// PATCH /api/orders/:id/confirm-weight - Confirmar peso y total del pedido (para restaurantes por kilo)
+router.patch('/:id/confirm-weight', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { items, total_amount } = req.body;
+    const restaurantId = req.restaurantId;
+
+    // Validar que el ID sea un UUID válido
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return res.status(400).json({ error: 'ID de pedido inválido. Debe ser un UUID válido.' });
+    }
+
+    if (!restaurantId) {
+      return res.status(403).json({ error: 'No se pudo determinar el restaurante' });
+    }
+
+    if (!total_amount || parseFloat(total_amount) <= 0) {
+      return res.status(400).json({ error: 'total_amount debe ser un número mayor a 0' });
+    }
+
+    const { supabaseAdmin } = req.app.locals;
+
+    // Verificar que el pedido existe, pertenece al restaurante y está pendiente de confirmación
+    const { data: existingOrder, error: fetchError } = await supabaseAdmin
+      .from('orders')
+      .select('id, pending_weight_confirmation, restaurant_id')
+      .eq('id', id)
+      .eq('restaurant_id', restaurantId)
+      .single();
+
+    if (fetchError || !existingOrder) {
+      return res.status(404).json({ error: 'Pedido no encontrado' });
+    }
+
+    if (!existingOrder.pending_weight_confirmation) {
+      return res.status(400).json({ error: 'Este pedido no está pendiente de confirmación de peso' });
+    }
+
+    // Actualizar el total del pedido y marcar como confirmado
+    const orderUpdates = {
+      total_amount: parseFloat(total_amount),
+      pending_weight_confirmation: false,
+    };
+
+    const { error: updateError } = await supabaseAdmin
+      .from('orders')
+      .update(orderUpdates)
+      .eq('id', id);
+
+    if (updateError) throw updateError;
+
+    // Si se proporcionan items con peso, actualizar los items
+    if (items && Array.isArray(items) && items.length > 0) {
+      // Actualizar cada item con su peso
+      for (const item of items) {
+        if (item.id && item.weight_kg !== undefined) {
+          const { error: itemUpdateError } = await supabaseAdmin
+            .from('order_items')
+            .update({ weight_kg: parseFloat(item.weight_kg) })
+            .eq('id', item.id)
+            .eq('order_id', id);
+
+          if (itemUpdateError) {
+            console.error('Error actualizando item:', itemUpdateError);
+            // No lanzar error, solo registrar
+          }
+        }
+      }
+    }
+
+    // Obtener el pedido actualizado completo
+    const { data: updatedOrder, error: fetchUpdatedError } = await supabaseAdmin
+      .from('orders')
+      .select(`
+        *,
+        rider:riders(id, name, phone),
+        waiter:waiters(id, name),
+        order_items(*)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (fetchUpdatedError) throw fetchUpdatedError;
+
+    // Registrar evento
+    await supabaseAdmin
+      .from('order_events')
+      .insert({
+        order_id: id,
+        event_type: 'weight_confirmed',
+        description: `Peso confirmado - Total: $${total_amount}`,
+      });
+
+    // Enviar webhook de confirmación a n8n para que confirme el pedido al cliente
+    sendOrderConfirmationWebhook(updatedOrder).catch(err => {
+      console.error('Error al enviar webhook de confirmación (no crítico):', err);
+    });
+
+    res.json(updatedOrder);
+  } catch (error) {
+    console.error('Error confirming weight:', error);
+    res.status(500).json({ error: 'Error al confirmar peso del pedido' });
   }
 });
 

@@ -13,6 +13,77 @@
  */
 
 /**
+ * Envía un webhook a n8n cuando un pedido es confirmado (después de completar peso/total)
+ * @param {Object} order - El objeto del pedido completo (debe incluir order_items)
+ * @returns {Promise<void>}
+ */
+export async function sendOrderConfirmationWebhook(order) {
+  const webhookUrl = process.env.N8N_ORDER_CONFIRMATION_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL;
+  
+  // Si no hay URL configurada, no hacer nada (no es crítico)
+  if (!webhookUrl) {
+    console.log('⚠️ N8N_ORDER_CONFIRMATION_WEBHOOK_URL no configurada, omitiendo webhook de confirmación');
+    return;
+  }
+
+  try {
+    // Usar chat_id del pedido si está disponible, o extraerlo
+    let chatId = order.chat_id;
+    
+    if (!chatId || chatId === '0' || chatId === '0000000000') {
+      // Intentar extraer del external_id
+      if (order.external_id && order.external_id.includes('_')) {
+        const parts = order.external_id.split('_');
+        if (parts.length >= 2 && parts[0] && parts[0] !== '0' && parts[0] !== '0000000000') {
+          chatId = parts[0];
+        }
+      }
+      
+      // Si aún no hay chat_id, usar customer_phone
+      if (!chatId && order.customer_phone && order.customer_phone !== '0' && order.customer_phone !== '0000000000') {
+        chatId = order.customer_phone;
+      }
+    }
+
+    const payload = {
+      order_id: order.id,
+      external_id: order.external_id,
+      chat_id: chatId || order.customer_phone || '0000000000',
+      customer_name: order.customer_name,
+      customer_phone: order.customer_phone,
+      customer_address: order.customer_address,
+      status: order.status,
+      total_amount: order.total_amount,
+      payment_method: order.payment_method,
+      payment_status: order.payment_status,
+      order_type: order.order_type,
+      created_at: order.created_at,
+      items: order.order_items || [],
+      confirmed: true, // Indica que el pedido fue confirmado después de pesar
+    };
+
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      console.error(`❌ Error al enviar webhook de confirmación a n8n: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`Detalles del error: ${errorText}`);
+    } else {
+      console.log(`✅ Webhook de confirmación enviado exitosamente a n8n para pedido ${order.id}`);
+    }
+  } catch (error) {
+    // No lanzar el error para no interrumpir el flujo principal
+    console.error('❌ Error al enviar webhook de confirmación a n8n:', error.message);
+  }
+}
+
+/**
  * Envía un webhook a n8n cuando un pedido cambia de estado a "listo para retirar"
  * @param {Object} order - El objeto del pedido completo (debe incluir order_items)
  * @returns {Promise<void>}

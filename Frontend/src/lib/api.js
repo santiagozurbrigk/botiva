@@ -249,6 +249,23 @@ export const api = {
     return response.json();
   },
 
+  // Confirmar peso y total del pedido (para restaurantes por kilo)
+  confirmOrderWeight: async (token, id, { items, total_amount }) => {
+    const response = await fetch(`${API_URL}/api/orders/${id}/confirm-weight`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ items, total_amount }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al confirmar peso del pedido');
+    }
+    return data;
+  },
+
   // Crear comanda desde panel de mozo
   createComanda: async (token, comandaData) => {
     const response = await fetch(`${API_URL}/api/orders/comanda`, {

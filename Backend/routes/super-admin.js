@@ -50,7 +50,7 @@ router.get('/restaurants/:id', authenticateSuperAdmin, async (req, res) => {
 // POST /api/super-admin/restaurants - Crear nuevo restaurante
 router.post('/restaurants', authenticateSuperAdmin, async (req, res) => {
   try {
-    const { name, email, phone, address, subscription_status, subscription_end_date } = req.body;
+    const { name, email, phone, address, subscription_status, subscription_end_date, sells_by_weight } = req.body;
     
     console.log('🍽️  Creando restaurante:', { name, email });
     
@@ -96,6 +96,7 @@ router.post('/restaurants', authenticateSuperAdmin, async (req, res) => {
       subscription_end_date: subscription_end_date || null,
       created_by: superAdminId,
       active: true,
+      sells_by_weight: sells_by_weight || false,
     };
 
     console.log('📝 Datos del restaurante a insertar:', restaurantData);

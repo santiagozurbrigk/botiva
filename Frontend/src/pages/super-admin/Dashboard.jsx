@@ -17,6 +17,7 @@ export default function SuperAdminDashboard() {
     phone: '',
     address: '',
     subscription_status: 'trial',
+    sells_by_weight: false,
   });
   const [adminFormData, setAdminFormData] = useState({
     name: '',
@@ -56,6 +57,7 @@ export default function SuperAdminDashboard() {
         phone: '',
         address: '',
         subscription_status: 'trial',
+        sells_by_weight: false,
       });
       fetchRestaurants();
     } catch (err) {
@@ -263,6 +265,21 @@ export default function SuperAdminDashboard() {
                   <option value="cancelled">Cancelada</option>
                 </select>
               </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="sells_by_weight"
+                  checked={formData.sells_by_weight}
+                  onChange={(e) => setFormData({ ...formData, sells_by_weight: e.target.checked })}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                />
+                <label htmlFor="sells_by_weight" className="ml-2 block text-sm text-gray-700">
+                  Vende productos por kilo
+                </label>
+              </div>
+              <p className="text-xs text-gray-500">
+                Si está marcado, los pedidos de este restaurante requerirán confirmación de peso antes de confirmar al cliente.
+              </p>
                 <div className="flex justify-end gap-2 flex-wrap">
                 <button
                   type="button"
