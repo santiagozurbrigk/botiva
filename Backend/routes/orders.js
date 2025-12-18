@@ -31,6 +31,9 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'items debe ser un array con al menos un elemento' });
     }
 
+    // Obtener supabaseAdmin primero (necesario para todas las operaciones)
+    const { supabaseAdmin } = req.app.locals;
+
     // Obtener restaurant_id primero para verificar si vende por kilo
     let restaurantId = null;
     if (waiter_id) {
@@ -96,8 +99,6 @@ router.post('/', async (req, res) => {
     if ((!order_type || order_type === 'delivery') && !external_id) {
       return res.status(400).json({ error: 'external_id es requerido para pedidos de delivery' });
     }
-
-    const { supabaseAdmin } = req.app.locals;
 
     // Verificar si el pedido ya existe (por external_id, solo para delivery)
     if (external_id) {
