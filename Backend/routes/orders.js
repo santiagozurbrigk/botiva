@@ -415,7 +415,7 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
     // Enviar webhook a n8n si el estado cambió a "finalizado" (listo para retirar)
     if (status === 'finalizado') {
       // Enviar webhook de forma asíncrona (no bloquear la respuesta)
-      sendOrderReadyWebhook(data).catch(err => {
+      sendOrderReadyWebhook(data, supabaseAdmin).catch(err => {
         console.error('Error al enviar webhook (no crítico):', err);
       });
     }
@@ -561,7 +561,7 @@ router.put('/:id/full', authenticateAdmin, async (req, res) => {
     // Enviar webhook a n8n si el estado cambió a "finalizado" (listo para retirar)
     if (status === 'finalizado') {
       // Enviar webhook de forma asíncrona (no bloquear la respuesta)
-      sendOrderReadyWebhook(updatedOrder).catch(err => {
+      sendOrderReadyWebhook(updatedOrder, supabaseAdmin).catch(err => {
         console.error('Error al enviar webhook (no crítico):', err);
       });
     }
@@ -950,7 +950,7 @@ router.patch('/:id/confirm-weight', authenticateAdmin, async (req, res) => {
       });
 
     // Enviar webhook de confirmación a n8n para que confirme el pedido al cliente
-    sendOrderConfirmationWebhook(updatedOrder).catch(err => {
+    sendOrderConfirmationWebhook(updatedOrder, supabaseAdmin).catch(err => {
       console.error('Error al enviar webhook de confirmación (no crítico):', err);
     });
 

@@ -2,27 +2,79 @@
  * Utilidad para enviar webhooks a n8n
  * 
  * CONFIGURACIÓN:
- * Para habilitar los webhooks, agrega la siguiente variable de entorno en tu archivo .env:
+ * Las URLs de webhook se configuran por restaurante en la tabla 'restaurants':
+ * - n8n_webhook_url: URL para notificaciones de pedidos listos para retirar
+ * - n8n_order_confirmation_webhook_url: URL para confirmación de pedidos por peso
  * 
- * N8N_WEBHOOK_URL=https://tu-instancia-n8n.com/webhook/order-ready
+ * Si no hay URL configurada en el restaurante, se intentará usar variables de entorno como fallback:
+ * - N8N_WEBHOOK_URL
+ * - N8N_ORDER_CONFIRMATION_WEBHOOK_URL
  * 
- * Esta URL debe ser el webhook de n8n que recibirá las notificaciones cuando un pedido
- * cambie de estado a "listo para retirar" o "finalizado".
- * 
- * Si la variable no está configurada, el sistema funcionará normalmente pero no enviará webhooks.
+ * Si no hay ninguna URL configurada, el sistema funcionará normalmente pero no enviará webhooks.
  */
 
 /**
+ * Obtiene la URL del webhook desde la base de datos o variables de entorno
+ * @param {Object} supabaseAdmin - Cliente de Supabase con permisos de admin
+ * @param {string} restaurantId - ID del restaurante
+ * @param {string} webhookType - Tipo de webhook: 'ready' o 'confirmation'
+ * @returns {Promise<string|null>} URL del webhook o null si no está configurada
+ */
+async function getWebhookUrl(supabaseAdmin, restaurantId, webhookType) {
+  try {
+    // Intentar obtener la URL desde la base de datos
+    const { data: restaurant, error } = await supabaseAdmin
+      .from('restaurants')
+      .select('n8n_webhook_url, n8n_order_confirmation_webhook_url')
+      .eq('id', restaurantId)
+      .single();
+
+    if (!error && restaurant) {
+      if (webhookType === 'confirmation') {
+        if (restaurant.n8n_order_confirmation_webhook_url) {
+          return restaurant.n8n_order_confirmation_webhook_url;
+        }
+      } else if (webhookType === 'ready') {
+        if (restaurant.n8n_webhook_url) {
+          return restaurant.n8n_webhook_url;
+        }
+      }
+    }
+
+    // Fallback a variables de entorno si no hay URL en la BD
+    if (webhookType === 'confirmation') {
+      return process.env.N8N_ORDER_CONFIRMATION_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL || null;
+    } else {
+      return process.env.N8N_WEBHOOK_URL || null;
+    }
+  } catch (error) {
+    console.error('Error obteniendo URL de webhook desde BD:', error);
+    // Fallback a variables de entorno en caso de error
+    if (webhookType === 'confirmation') {
+      return process.env.N8N_ORDER_CONFIRMATION_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL || null;
+    } else {
+      return process.env.N8N_WEBHOOK_URL || null;
+    }
+  }
+}
+
+/**
  * Envía un webhook a n8n cuando un pedido es confirmado (después de completar peso/total)
- * @param {Object} order - El objeto del pedido completo (debe incluir order_items)
+ * @param {Object} order - El objeto del pedido completo (debe incluir order_items y restaurant_id)
+ * @param {Object} supabaseAdmin - Cliente de Supabase con permisos de admin
  * @returns {Promise<void>}
  */
-export async function sendOrderConfirmationWebhook(order) {
-  const webhookUrl = process.env.N8N_ORDER_CONFIRMATION_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL;
+export async function sendOrderConfirmationWebhook(order, supabaseAdmin) {
+  if (!order.restaurant_id) {
+    console.log('⚠️ Pedido sin restaurant_id, omitiendo webhook de confirmación');
+    return;
+  }
+
+  const webhookUrl = await getWebhookUrl(supabaseAdmin, order.restaurant_id, 'confirmation');
   
   // Si no hay URL configurada, no hacer nada (no es crítico)
   if (!webhookUrl) {
-    console.log('⚠️ N8N_ORDER_CONFIRMATION_WEBHOOK_URL no configurada, omitiendo webhook de confirmación');
+    console.log('⚠️ URL de webhook de confirmación no configurada para el restaurante, omitiendo webhook');
     return;
   }
 
@@ -85,15 +137,21 @@ export async function sendOrderConfirmationWebhook(order) {
 
 /**
  * Envía un webhook a n8n cuando un pedido cambia de estado a "listo para retirar"
- * @param {Object} order - El objeto del pedido completo (debe incluir order_items)
+ * @param {Object} order - El objeto del pedido completo (debe incluir order_items y restaurant_id)
+ * @param {Object} supabaseAdmin - Cliente de Supabase con permisos de admin
  * @returns {Promise<void>}
  */
-export async function sendOrderReadyWebhook(order) {
-  const webhookUrl = process.env.N8N_WEBHOOK_URL;
+export async function sendOrderReadyWebhook(order, supabaseAdmin) {
+  if (!order.restaurant_id) {
+    console.log('⚠️ Pedido sin restaurant_id, omitiendo webhook');
+    return;
+  }
+
+  const webhookUrl = await getWebhookUrl(supabaseAdmin, order.restaurant_id, 'ready');
   
   // Si no hay URL configurada, no hacer nada (no es crítico)
   if (!webhookUrl) {
-    console.log('⚠️ N8N_WEBHOOK_URL no configurada, omitiendo webhook');
+    console.log('⚠️ URL de webhook no configurada para el restaurante, omitiendo webhook');
     return;
   }
 

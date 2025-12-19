@@ -50,7 +50,17 @@ router.get('/restaurants/:id', authenticateSuperAdmin, async (req, res) => {
 // POST /api/super-admin/restaurants - Crear nuevo restaurante
 router.post('/restaurants', authenticateSuperAdmin, async (req, res) => {
   try {
-    const { name, email, phone, address, subscription_status, subscription_end_date, sells_by_weight } = req.body;
+    const { 
+      name, 
+      email, 
+      phone, 
+      address, 
+      subscription_status, 
+      subscription_end_date, 
+      sells_by_weight,
+      n8n_webhook_url,
+      n8n_order_confirmation_webhook_url
+    } = req.body;
     
     console.log('🍽️  Creando restaurante:', { name, email });
     
@@ -97,6 +107,8 @@ router.post('/restaurants', authenticateSuperAdmin, async (req, res) => {
       created_by: superAdminId,
       active: true,
       sells_by_weight: sells_by_weight || false,
+      n8n_webhook_url: n8n_webhook_url || null,
+      n8n_order_confirmation_webhook_url: n8n_order_confirmation_webhook_url || null,
     };
 
     console.log('📝 Datos del restaurante a insertar:', restaurantData);
@@ -240,7 +252,18 @@ router.post('/restaurants/:id/admin', authenticateSuperAdmin, async (req, res) =
 router.patch('/restaurants/:id', authenticateSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, phone, address, active, subscription_status, subscription_end_date } = req.body;
+    const { 
+      name, 
+      email, 
+      phone, 
+      address, 
+      active, 
+      subscription_status, 
+      subscription_end_date,
+      sells_by_weight,
+      n8n_webhook_url,
+      n8n_order_confirmation_webhook_url
+    } = req.body;
 
     const { supabaseAdmin } = req.app.locals;
 
@@ -252,6 +275,9 @@ router.patch('/restaurants/:id', authenticateSuperAdmin, async (req, res) => {
     if (active !== undefined) updates.active = active;
     if (subscription_status !== undefined) updates.subscription_status = subscription_status;
     if (subscription_end_date !== undefined) updates.subscription_end_date = subscription_end_date;
+    if (sells_by_weight !== undefined) updates.sells_by_weight = sells_by_weight;
+    if (n8n_webhook_url !== undefined) updates.n8n_webhook_url = n8n_webhook_url || null;
+    if (n8n_order_confirmation_webhook_url !== undefined) updates.n8n_order_confirmation_webhook_url = n8n_order_confirmation_webhook_url || null;
 
     const { data: restaurant, error } = await supabaseAdmin
       .from('restaurants')
