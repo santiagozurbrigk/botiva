@@ -79,6 +79,23 @@ export async function sendOrderConfirmationWebhook(order, supabaseAdmin) {
   }
 
   try {
+    // Obtener tiempo de demora del restaurante desde delivery_config
+    let deliveryTimeMinutes = 30; // Valor por defecto
+    try {
+      const { data: deliveryConfig, error: configError } = await supabaseAdmin
+        .from('delivery_config')
+        .select('delivery_time_minutes')
+        .eq('restaurant_id', order.restaurant_id)
+        .eq('is_active', true)
+        .single();
+
+      if (!configError && deliveryConfig && deliveryConfig.delivery_time_minutes) {
+        deliveryTimeMinutes = deliveryConfig.delivery_time_minutes;
+      }
+    } catch (error) {
+      console.warn('⚠️ No se pudo obtener tiempo de demora del restaurante, usando valor por defecto:', error.message);
+    }
+
     // Usar chat_id del pedido si está disponible, o extraerlo
     let chatId = order.chat_id;
     
@@ -112,6 +129,7 @@ export async function sendOrderConfirmationWebhook(order, supabaseAdmin) {
       created_at: order.created_at,
       items: order.order_items || [],
       confirmed: true, // Indica que el pedido fue confirmado después de pesar
+      delivery_time_minutes: deliveryTimeMinutes, // Tiempo de demora configurado por el restaurante
     };
 
     const response = await fetch(webhookUrl, {

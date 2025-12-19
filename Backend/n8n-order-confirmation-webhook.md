@@ -53,7 +53,8 @@ Cuando un empleado confirma el peso y total del pedido, el backend envía un web
       "weight_kg": 1.250
     }
   ],
-  "confirmed": true
+  "confirmed": true,
+  "delivery_time_minutes": 45
 }
 ```
 
@@ -62,6 +63,7 @@ Cuando un empleado confirma el peso y total del pedido, el backend envía un web
 - `total_amount`: Total real del pedido después de pesar
 - `items[].weight_kg`: Peso real en kilogramos de cada item
 - `confirmed`: Indica que el pedido fue confirmado después de pesar
+- `delivery_time_minutes`: Tiempo de demora en minutos configurado por el restaurante en su panel de administración
 
 ---
 
@@ -104,6 +106,7 @@ const customerName = webhookData.customer_name;
 const customerPhone = webhookData.customer_phone;
 const totalAmount = webhookData.total_amount;
 const items = webhookData.items || [];
+const deliveryTimeMinutes = webhookData.delivery_time_minutes || 30; // Tiempo de demora en minutos
 
 // Formatear items con peso para el mensaje
 const itemsText = items.map(item => {
@@ -119,6 +122,18 @@ const itemsText = items.map(item => {
   }
 }).join('\n');
 
+// Calcular tiempo estimado de entrega
+const deliveryTimeHours = Math.floor(deliveryTimeMinutes / 60);
+const deliveryTimeMins = deliveryTimeMinutes % 60;
+let deliveryTimeText = '';
+if (deliveryTimeHours > 0 && deliveryTimeMins > 0) {
+  deliveryTimeText = `${deliveryTimeHours} hora${deliveryTimeHours > 1 ? 's' : ''} y ${deliveryTimeMins} minuto${deliveryTimeMins > 1 ? 's' : ''}`;
+} else if (deliveryTimeHours > 0) {
+  deliveryTimeText = `${deliveryTimeHours} hora${deliveryTimeHours > 1 ? 's' : ''}`;
+} else {
+  deliveryTimeText = `${deliveryTimeMins} minuto${deliveryTimeMins > 1 ? 's' : ''}`;
+}
+
 // Mensaje para enviar al cliente por WhatsApp
 const message = `¡Hola ${customerName}! 👋
 
@@ -128,6 +143,8 @@ Tu pedido #${externalId.split('_')[0] || orderId} ha sido *confirmado* ✅
 ${itemsText}
 
 💰 *Total: $${totalAmount}*
+
+⏱️ *Tiempo estimado de entrega: ${deliveryTimeText}*
 
 ¡Gracias por tu compra! 🎉`;
 
@@ -153,6 +170,8 @@ return {
     total_amount: totalAmount,
     items: items,
     items_text: itemsText,
+    delivery_time_minutes: deliveryTimeMinutes,
+    delivery_time_text: deliveryTimeText,
     
     // Flags útiles
     confirmed: true,
