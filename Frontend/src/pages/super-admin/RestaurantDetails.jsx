@@ -12,6 +12,12 @@ export default function RestaurantDetails() {
   const [restaurant, setRestaurant] = useState(null);
   const [admins, setAdmins] = useState([]);
   const [statistics, setStatistics] = useState(null);
+  const [editingWebhooks, setEditingWebhooks] = useState(false);
+  const [webhookData, setWebhookData] = useState({
+    n8n_webhook_url: '',
+    n8n_order_confirmation_webhook_url: '',
+  });
+  const [savingWebhooks, setSavingWebhooks] = useState(false);
 
   useEffect(() => {
     fetchDetails();
@@ -25,6 +31,11 @@ export default function RestaurantDetails() {
       setRestaurant(data.restaurant);
       setAdmins(data.admins);
       setStatistics(data.statistics);
+      // Inicializar datos de webhook
+      setWebhookData({
+        n8n_webhook_url: data.restaurant.n8n_webhook_url || '',
+        n8n_order_confirmation_webhook_url: data.restaurant.n8n_order_confirmation_webhook_url || '',
+      });
     } catch (err) {
       console.error('Error fetching restaurant details:', err);
       setError(err.message || 'Error al obtener detalles del restaurante');
@@ -33,6 +44,22 @@ export default function RestaurantDetails() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveWebhooks = async () => {
+    try {
+      setSavingWebhooks(true);
+      await api.updateRestaurant(token, id, webhookData);
+      // Actualizar el restaurante local
+      setRestaurant({ ...restaurant, ...webhookData });
+      setEditingWebhooks(false);
+      alert('Webhooks actualizados exitosamente');
+    } catch (err) {
+      console.error('Error saving webhooks:', err);
+      alert(err.message || 'Error al guardar webhooks');
+    } finally {
+      setSavingWebhooks(false);
     }
   };
 
@@ -240,6 +267,126 @@ export default function RestaurantDetails() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Configuración de Webhooks n8n */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Configuración de Webhooks n8n</h2>
+            <p className="text-sm text-gray-500">
+              Configura las URLs de webhook de n8n para este restaurante. Cada restaurante puede tener sus propias URLs.
+            </p>
+          </div>
+          {!editingWebhooks && (
+            <button
+              onClick={() => setEditingWebhooks(true)}
+              className="btn-primary px-4 py-2 text-sm rounded-xl"
+            >
+              Editar Webhooks
+            </button>
+          )}
+        </div>
+
+        {editingWebhooks ? (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                URL Webhook n8n (Pedidos Listos)
+              </label>
+              <input
+                type="url"
+                value={webhookData.n8n_webhook_url}
+                onChange={(e) => setWebhookData({ ...webhookData, n8n_webhook_url: e.target.value })}
+                placeholder="https://tu-n8n.com/webhook/order-ready"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                URL del webhook de n8n para notificaciones cuando un pedido está listo para retirar
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                URL Webhook n8n (Confirmación por Peso)
+              </label>
+              <input
+                type="url"
+                value={webhookData.n8n_order_confirmation_webhook_url}
+                onChange={(e) => setWebhookData({ ...webhookData, n8n_order_confirmation_webhook_url: e.target.value })}
+                placeholder="https://tu-n8n.com/webhook/order-confirmation"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                URL del webhook de n8n para confirmación de pedidos por peso (solo para restaurantes que venden por kilo)
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setEditingWebhooks(false);
+                  // Restaurar valores originales
+                  setWebhookData({
+                    n8n_webhook_url: restaurant.n8n_webhook_url || '',
+                    n8n_order_confirmation_webhook_url: restaurant.n8n_order_confirmation_webhook_url || '',
+                  });
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                disabled={savingWebhooks}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveWebhooks}
+                className="btn-primary px-4 py-2 rounded-xl"
+                disabled={savingWebhooks}
+              >
+                {savingWebhooks ? 'Guardando...' : 'Guardar Webhooks'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                URL Webhook n8n (Pedidos Listos)
+              </label>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm text-gray-900 font-mono break-all">
+                  {restaurant.n8n_webhook_url || 'No configurado'}
+                </code>
+                {restaurant.n8n_webhook_url && (
+                  <button
+                    onClick={() => copyToClipboard(restaurant.n8n_webhook_url, 'URL copiada al portapapeles')}
+                    className="btn-primary px-3 py-2 text-sm rounded-xl"
+                  >
+                    📋 Copiar
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                URL Webhook n8n (Confirmación por Peso)
+              </label>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm text-gray-900 font-mono break-all">
+                  {restaurant.n8n_order_confirmation_webhook_url || 'No configurado'}
+                </code>
+                {restaurant.n8n_order_confirmation_webhook_url && (
+                  <button
+                    onClick={() => copyToClipboard(restaurant.n8n_order_confirmation_webhook_url, 'URL copiada al portapapeles')}
+                    className="btn-primary px-3 py-2 text-sm rounded-xl"
+                  >
+                    📋 Copiar
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Links del restaurante */}

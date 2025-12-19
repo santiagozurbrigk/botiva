@@ -18,8 +18,6 @@ export default function SuperAdminDashboard() {
     address: '',
     subscription_status: 'trial',
     sells_by_weight: false,
-    n8n_webhook_url: '',
-    n8n_order_confirmation_webhook_url: '',
   });
   const [adminFormData, setAdminFormData] = useState({
     name: '',
@@ -60,8 +58,6 @@ export default function SuperAdminDashboard() {
         address: '',
         subscription_status: 'trial',
         sells_by_weight: false,
-        n8n_webhook_url: '',
-        n8n_order_confirmation_webhook_url: '',
       });
       fetchRestaurants();
     } catch (err) {
@@ -215,7 +211,7 @@ export default function SuperAdminDashboard() {
       {/* Modal Crear Restaurante */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[95vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">Nuevo Restaurante</h2>
             <form onSubmit={handleCreateRestaurant} className="space-y-4">
               <div>
@@ -284,36 +280,6 @@ export default function SuperAdminDashboard() {
               <p className="text-xs text-gray-500">
                 Si está marcado, los pedidos de este restaurante requerirán confirmación de peso antes de confirmar al cliente.
               </p>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  URL Webhook n8n (Pedidos Listos)
-                </label>
-                <input
-                  type="url"
-                  value={formData.n8n_webhook_url}
-                  onChange={(e) => setFormData({ ...formData, n8n_webhook_url: e.target.value })}
-                  placeholder="https://tu-n8n.com/webhook/order-ready"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  URL del webhook de n8n para notificaciones cuando un pedido está listo para retirar
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  URL Webhook n8n (Confirmación por Peso)
-                </label>
-                <input
-                  type="url"
-                  value={formData.n8n_order_confirmation_webhook_url}
-                  onChange={(e) => setFormData({ ...formData, n8n_order_confirmation_webhook_url: e.target.value })}
-                  placeholder="https://tu-n8n.com/webhook/order-confirmation"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  URL del webhook de n8n para confirmación de pedidos por peso (solo para restaurantes que venden por kilo)
-                </p>
-              </div>
                 <div className="flex justify-end gap-2 flex-wrap">
                 <button
                   type="button"
